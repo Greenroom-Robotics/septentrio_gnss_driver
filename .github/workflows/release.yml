@@ -8,7 +8,7 @@ on:
         description: 'If not specified, all packages will be released.'
         options:
           - ""
-          - launch_ext
+          - septentrio_gnss_driver
 
 jobs:
  release:
@@ -20,7 +20,7 @@ jobs:
             arch: amd64
             ros_distro: iron
             github_release: true
-          - runner: buildjet-2vcpu-ubuntu-2204-arm
+          - runner: buildjet-8vcpu-ubuntu-2204-arm
             arch: arm64
             ros_distro: iron
             github_release: false
@@ -28,7 +28,7 @@ jobs:
             arch: amd64
             ros_distro: jazzy
             github_release: false
-          - runner: buildjet-2vcpu-ubuntu-2204-arm
+          - runner: buildjet-8vcpu-ubuntu-2204-arm
             arch: arm64
             ros_distro: jazzy
             github_release: false
@@ -50,3 +50,4 @@ jobs:
           github_release: ${{ matrix.job.github_release }}
           public: true
           changelog: false
+
