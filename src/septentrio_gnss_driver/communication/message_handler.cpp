@@ -441,22 +441,18 @@ namespace io {
         publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
     };
 
-    bool MessageHandler::covarianceOutsideThreshold()
+    float MessageHandler::getCovariance()
     {
-        float_t covariance = sqrt(
+        return sqrt(
             (last_poscovgeodetic_.cov_lonlon * last_poscovgeodetic_.cov_lonlon) +
             (last_poscovgeodetic_.cov_latlat * last_poscovgeodetic_.cov_latlat));
+    }
 
+    bool MessageHandler::covarianceOutsideThreshold()
+    {
+        float covariance = getCovariance();
         float covariance_threshold;
         node_->get_parameter("covariance_threshold", covariance_threshold);
-
-        covariance_threshold;
-
-        std::string covariance_msg = "Covariance: " + std::to_string(covariance);
-        node_->log(log_level::INFO, covariance_msg);
-        std::string covariance_threshold_msg =
-            "Covariance threshold: " + std::to_string(covariance_threshold);
-        node_->log(log_level::INFO, covariance_threshold_msg);
 
         if (covariance > covariance_threshold ||
             covariance < -covariance_threshold || std::isnan(covariance))
@@ -611,7 +607,8 @@ namespace io {
         if (covarianceOutsideThreshold())
         {
             receiver_status.level = DiagnosticStatusMsg::ERROR;
-            receiver_status.message = "Covariance outside threshold";
+            receiver_status.message = "Covariance outside threshold {" +
+                                      std::to_string(getCovariance()) + "}";
         } else if ((last_receiverstatus_.rx_error & (1 << 9)))
             receiver_status.level = DiagnosticStatusMsg::ERROR;
         else if ((last_receiverstatus_.rx_status & (1 << 8)))
@@ -723,7 +720,8 @@ namespace io {
         if (covarianceOutsideThreshold())
         {
             diagOsnma.level = DiagnosticStatusMsg::ERROR;
-            diagOsnma.message = "Covariance outside threshold";
+            diagOsnma.message = "Covariance outside threshold {" +
+                                std::to_string(getCovariance()) + "}";
         } else if ((gal_spoofed + gps_spoofed) == 0)
             diagOsnma.level = DiagnosticStatusMsg::OK;
         else if ((gal_authentic + gps_authentic) > 0)
@@ -829,7 +827,8 @@ namespace io {
         if (covarianceOutsideThreshold())
         {
             diagRf.level = DiagnosticStatusMsg::ERROR;
-            diagRf.message = "Covariance outside threshold";
+            diagRf.message = "Covariance outside threshold {" +
+                             std::to_string(getCovariance()) + "}";
         } else if (spoofed || detected)
             diagRf.level = DiagnosticStatusMsg::ERROR;
         else if (mitigated)

@@ -453,6 +453,11 @@ namespace io {
         Timestamp timestampSBF(uint32_t tow, uint16_t wnc) const;
 
         /**
+         * @brief Get current covariance
+         */
+        float getCovariance();
+
+        /**
          * @brief Check covariance
          */
         bool covarianceOutsideThreshold();
