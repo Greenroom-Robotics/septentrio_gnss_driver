@@ -462,9 +462,26 @@ namespace io {
          */
         bool horizontalErrorOutsideThreshold();
 
-        // /**
-        //  * @brief Covariance estimation based on latlat and lgnlgn
-        //  */
-        // float_t covariance_estimation_;
+        /**
+         * @brief Fill PoseWithCovarianceStampedMsg message with pose data
+         */
+        void fillPoseCovData(PoseWithCovarianceStampedMsg& msg, uint32_t& last_ins_tow);
+
+        /**
+         * @brief Fill GeoPoseWithCovarianceStampedMsg message with pose data
+         */
+        void fillGeoPoseCovData(GeoPoseWithCovarianceStampedMsg& msg,
+                                uint32_t& last_ins_tow);
+
+        /**
+         * @brief Fill GeoPoseStampedMsg message with pose data
+         */
+        void fillGeoPoseData(GeoPoseStampedMsg& msg, uint32_t& last_ins_tow);
+
+        /**
+         * @brief Fill message with covariance data
+         */
+        template <typename T>
+        void fillCovarianceData(T& msg);
     };
 } // namespace io

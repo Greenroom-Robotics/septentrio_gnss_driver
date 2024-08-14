@@ -65,14 +65,9 @@ namespace io {
         return std::isnan(val) ? 0.0 : deg2radSq(val);
     }
 
-    void MessageHandler::assemblePoseWithCovarianceStamped()
+    void MessageHandler::fillPoseCovData(PoseWithCovarianceStampedMsg& msg,
+                                      uint32_t& last_ins_tow)
     {
-        if (!settings_->publish_pose)
-            return;
-
-        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
-
-        PoseWithCovarianceStampedMsg msg;
         if (settings_->septentrio_receiver_type == "ins")
         {
             if (!validValue(last_insnavgeod_.block_header.tow) ||
@@ -86,28 +81,7 @@ namespace io {
             msg.pose.pose.position.y = rad2deg(last_insnavgeod_.latitude);
             msg.pose.pose.position.z = last_insnavgeod_.height;
 
-            // Filling in the pose data
-            if ((last_insnavgeod_.sb_list & 1) != 0)
-            {
-                // Pos autocov
-                msg.pose.covariance[0] = square(last_insnavgeod_.longitude_std_dev);
-                msg.pose.covariance[7] = square(last_insnavgeod_.latitude_std_dev);
-                msg.pose.covariance[14] = square(last_insnavgeod_.height_std_dev);
-            } else
-            {
-                msg.pose.covariance[0] = -1.0;
-                msg.pose.covariance[7] = -1.0;
-                msg.pose.covariance[14] = -1.0;
-            }
-            if ((last_insnavgeod_.sb_list & 2) != 0)
-            {
-                double yaw = last_insnavgeod_.heading;
-                double pitch = last_insnavgeod_.pitch;
-                double roll = last_insnavgeod_.roll;
-                // Attitude
-                msg.pose.pose.orientation = convertEulerToQuaternionMsg(
-                    deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            } else
+            if ((last_insnavgeod_.sb_list & 2) == 0)
             {
                 msg.pose.pose.orientation.w =
                     std::numeric_limits<double>::quiet_NaN();
@@ -118,52 +92,8 @@ namespace io {
                 msg.pose.pose.orientation.z =
                     std::numeric_limits<double>::quiet_NaN();
             }
-            if ((last_insnavgeod_.sb_list & 4) != 0)
-            {
-                // Attitude autocov
-                msg.pose.covariance[21] =
-                    convertAutoCovariance(last_insnavgeod_.roll_std_dev);
-                msg.pose.covariance[28] =
-                    convertAutoCovariance(last_insnavgeod_.pitch_std_dev);
-                msg.pose.covariance[35] =
-                    convertAutoCovariance(last_insnavgeod_.heading_std_dev);
-
-            } else
-            {
-                msg.pose.covariance[21] = -1.0;
-                msg.pose.covariance[28] = -1.0;
-                msg.pose.covariance[35] = -1.0;
-            }
-            if ((last_insnavgeod_.sb_list & 32) != 0)
-            {
-                // Pos cov
-                msg.pose.covariance[1] = last_insnavgeod_.latitude_longitude_cov;
-                msg.pose.covariance[2] = last_insnavgeod_.longitude_height_cov;
-                msg.pose.covariance[6] = last_insnavgeod_.latitude_longitude_cov;
-                msg.pose.covariance[8] = last_insnavgeod_.latitude_height_cov;
-                msg.pose.covariance[12] = last_insnavgeod_.longitude_height_cov;
-                msg.pose.covariance[13] = last_insnavgeod_.latitude_height_cov;
-            }
-            if ((last_insnavgeod_.sb_list & 64) != 0)
-            {
-                // Attitude cov
-                msg.pose.covariance[22] =
-                    convertCovariance(last_insnavgeod_.pitch_roll_cov);
-                msg.pose.covariance[23] =
-                    convertCovariance(last_insnavgeod_.heading_roll_cov);
-                msg.pose.covariance[27] =
-                    convertCovariance(last_insnavgeod_.pitch_roll_cov);
-
-                msg.pose.covariance[29] =
-                    convertCovariance(last_insnavgeod_.heading_pitch_cov);
-                msg.pose.covariance[33] =
-                    convertCovariance(last_insnavgeod_.heading_roll_cov);
-                msg.pose.covariance[34] =
-                    convertCovariance(last_insnavgeod_.heading_pitch_cov);
-            }
         } else
         {
-
             if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
                 (last_pvtgeodetic_.block_header.tow !=
                  last_atteuler_.block_header.tow) ||
@@ -188,46 +118,67 @@ namespace io {
             msg.pose.pose.position.x = rad2deg(last_pvtgeodetic_.longitude);
             msg.pose.pose.position.y = rad2deg(last_pvtgeodetic_.latitude);
             msg.pose.pose.position.z = last_pvtgeodetic_.height;
-            // Filling in the covariance data in row-major order
-            msg.pose.covariance[0] = last_poscovgeodetic_.cov_lonlon;
-            msg.pose.covariance[1] = last_poscovgeodetic_.cov_latlon;
-            msg.pose.covariance[2] = last_poscovgeodetic_.cov_lonhgt;
-            msg.pose.covariance[6] = last_poscovgeodetic_.cov_latlon;
-            msg.pose.covariance[7] = last_poscovgeodetic_.cov_latlat;
-            msg.pose.covariance[8] = last_poscovgeodetic_.cov_lathgt;
-            msg.pose.covariance[12] = last_poscovgeodetic_.cov_lonhgt;
-            msg.pose.covariance[13] = last_poscovgeodetic_.cov_lathgt;
-            msg.pose.covariance[14] = last_poscovgeodetic_.cov_hgthgt;
-            msg.pose.covariance[21] =
-                convertAutoCovariance(last_attcoveuler_.cov_rollroll);
-            msg.pose.covariance[22] =
-                convertCovariance(last_attcoveuler_.cov_pitchroll);
-            msg.pose.covariance[23] =
-                convertCovariance(last_attcoveuler_.cov_headroll);
-            msg.pose.covariance[27] =
-                convertCovariance(last_attcoveuler_.cov_pitchroll);
-            msg.pose.covariance[28] =
-                convertAutoCovariance(last_attcoveuler_.cov_pitchpitch);
-            msg.pose.covariance[29] =
-                convertCovariance(last_attcoveuler_.cov_headpitch);
-            msg.pose.covariance[33] =
-                convertCovariance(last_attcoveuler_.cov_headroll);
-            msg.pose.covariance[34] =
-                convertCovariance(last_attcoveuler_.cov_headpitch);
-            msg.pose.covariance[35] =
-                convertAutoCovariance(last_attcoveuler_.cov_headhead);
         }
-        publish<PoseWithCovarianceStampedMsg>("pose_covariance_stamped", msg);
-    };
+    }
 
-    void MessageHandler::assembleGeoPoseStamped()
+    void MessageHandler::fillGeoPoseCovData(GeoPoseWithCovarianceStampedMsg& msg,
+                                            uint32_t& last_ins_tow)
     {
-        if (!settings_->publish_geopose_stamped)
-            return;
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            if (!validValue(last_insnavgeod_.block_header.tow) ||
+                (last_insnavgeod_.block_header.tow == last_ins_tow))
+                return;
+            last_ins_tow = last_insnavgeod_.block_header.tow;
 
-        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
+            msg.header = last_insnavgeod_.header;
 
-        GeoPoseStampedMsg msg;
+            msg.pose.pose.position.latitude = last_insnavgeod_.latitude;
+            msg.pose.pose.position.longitude = last_insnavgeod_.longitude;
+            msg.pose.pose.position.altitude = last_insnavgeod_.height;
+
+            if ((last_insnavgeod_.sb_list & 2) == 0)
+            {
+                msg.pose.pose.orientation.w =
+                    std::numeric_limits<double>::quiet_NaN();
+                msg.pose.pose.orientation.x =
+                    std::numeric_limits<double>::quiet_NaN();
+                msg.pose.pose.orientation.y =
+                    std::numeric_limits<double>::quiet_NaN();
+                msg.pose.pose.orientation.z =
+                    std::numeric_limits<double>::quiet_NaN();
+            }
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_atteuler_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_poscovgeodetic_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_attcoveuler_.block_header.tow))
+                return;
+
+            msg.header = last_pvtgeodetic_.header;
+
+            // Filling in the pose data
+            double yaw = last_atteuler_.heading;
+            double pitch = last_atteuler_.pitch;
+            double roll = last_atteuler_.roll;
+
+            roll = std::isnan(roll) ? 0.0 : roll;
+            pitch = std::isnan(pitch) ? 0.0 : pitch;
+
+            msg.pose.pose.orientation = convertEulerToQuaternionMsg(
+                deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
+            msg.pose.pose.position.latitude = last_insnavgeod_.latitude;
+            msg.pose.pose.position.longitude = last_insnavgeod_.longitude;
+            msg.pose.pose.position.altitude = last_insnavgeod_.height;
+        }
+    }
+
+    void MessageHandler::fillGeoPoseData(GeoPoseStampedMsg& msg, uint32_t& last_ins_tow)
+    {
         if (settings_->septentrio_receiver_type == "ins")
         {
             if (!validValue(last_insnavgeod_.block_header.tow) ||
@@ -283,31 +234,13 @@ namespace io {
             msg.pose.position.longitude = last_pvtgeodetic_.longitude;
             msg.pose.position.altitude = last_pvtgeodetic_.height;
         }
+    }
 
-        publish<GeoPoseStampedMsg>("geopose_stamped", msg);
-    };
-
-    void MessageHandler::assembleGeoPoseWithCovarianceStamped()
+    template <typename T>
+    void MessageHandler::fillCovarianceData(T& msg)
     {
-        if (!settings_->publish_geopose_covariance_stamped)
-            return;
-
-        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
-
-        GeoPoseWithCovarianceStampedMsg msg;
         if (settings_->septentrio_receiver_type == "ins")
         {
-            if (!validValue(last_insnavgeod_.block_header.tow) ||
-                (last_insnavgeod_.block_header.tow == last_ins_tow))
-                return;
-            last_ins_tow = last_insnavgeod_.block_header.tow;
-
-            msg.header = last_insnavgeod_.header;
-
-            msg.pose.pose.position.latitude = last_insnavgeod_.latitude;
-            msg.pose.pose.position.longitude = last_insnavgeod_.longitude;
-            msg.pose.pose.position.altitude = last_insnavgeod_.height;
-
             // Filling in the pose data
             if ((last_insnavgeod_.sb_list & 1) != 0)
             {
@@ -321,25 +254,7 @@ namespace io {
                 msg.pose.covariance[7] = -1.0;
                 msg.pose.covariance[14] = -1.0;
             }
-            if ((last_insnavgeod_.sb_list & 2) != 0)
-            {
-                double yaw = last_insnavgeod_.heading;
-                double pitch = last_insnavgeod_.pitch;
-                double roll = last_insnavgeod_.roll;
-                // Attitude
-                msg.pose.pose.orientation = convertEulerToQuaternionMsg(
-                    deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            } else
-            {
-                msg.pose.pose.orientation.w =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.x =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.y =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.z =
-                    std::numeric_limits<double>::quiet_NaN();
-            }
+
             if ((last_insnavgeod_.sb_list & 4) != 0)
             {
                 // Attitude autocov
@@ -349,13 +264,13 @@ namespace io {
                     convertAutoCovariance(last_insnavgeod_.pitch_std_dev);
                 msg.pose.covariance[35] =
                     convertAutoCovariance(last_insnavgeod_.heading_std_dev);
-
             } else
             {
                 msg.pose.covariance[21] = -1.0;
                 msg.pose.covariance[28] = -1.0;
                 msg.pose.covariance[35] = -1.0;
             }
+
             if ((last_insnavgeod_.sb_list & 32) != 0)
             {
                 // Pos cov
@@ -366,6 +281,7 @@ namespace io {
                 msg.pose.covariance[12] = last_insnavgeod_.longitude_height_cov;
                 msg.pose.covariance[13] = last_insnavgeod_.latitude_height_cov;
             }
+
             if ((last_insnavgeod_.sb_list & 64) != 0)
             {
                 // Attitude cov
@@ -375,7 +291,6 @@ namespace io {
                     convertCovariance(last_insnavgeod_.heading_roll_cov);
                 msg.pose.covariance[27] =
                     convertCovariance(last_insnavgeod_.pitch_roll_cov);
-
                 msg.pose.covariance[29] =
                     convertCovariance(last_insnavgeod_.heading_pitch_cov);
                 msg.pose.covariance[33] =
@@ -385,30 +300,6 @@ namespace io {
             }
         } else
         {
-            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_atteuler_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_poscovgeodetic_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_attcoveuler_.block_header.tow))
-                return;
-
-            msg.header = last_pvtgeodetic_.header;
-
-            // Filling in the pose data
-            double yaw = last_atteuler_.heading;
-            double pitch = last_atteuler_.pitch;
-            double roll = last_atteuler_.roll;
-
-            roll = std::isnan(roll) ? 0.0 : roll;
-            pitch = std::isnan(pitch) ? 0.0 : pitch;
-
-            msg.pose.pose.orientation = convertEulerToQuaternionMsg(
-                deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            msg.pose.pose.position.latitude = last_pvtgeodetic_.latitude;
-            msg.pose.pose.position.longitude = last_pvtgeodetic_.longitude;
-            msg.pose.pose.position.altitude = last_pvtgeodetic_.height;
             // Filling in the covariance data in row-major order
             msg.pose.covariance[0] = last_poscovgeodetic_.cov_lonlon;
             msg.pose.covariance[1] = last_poscovgeodetic_.cov_latlon;
@@ -438,7 +329,49 @@ namespace io {
             msg.pose.covariance[35] =
                 convertAutoCovariance(last_attcoveuler_.cov_headhead);
         }
-        publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
+    }
+
+    void MessageHandler::assemblePoseWithCovarianceStamped()
+    {
+        if (!settings_->publish_pose)
+            return;
+
+        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
+
+        PoseWithCovarianceStampedMsg msg;
+
+        fillPoseCovData(msg, last_ins_tow);
+        fillCovarianceData(msg);
+
+        publish<PoseWithCovarianceStampedMsg>("pose_covariance_stamped", msg);
+    };
+
+    void MessageHandler::assembleGeoPoseStamped()
+    {
+        if (!settings_->publish_geopose_stamped)
+            return;
+
+        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
+
+        GeoPoseStampedMsg msg;
+
+        fillGeoPoseData(msg, last_ins_tow);
+
+        publish<GeoPoseStampedMsg>("geopose_stamped", msg);
+    };
+
+    void MessageHandler::assembleGeoPoseWithCovarianceStamped()
+    {
+        if (!settings_->publish_geopose_covariance_stamped)
+            return;
+
+        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
+
+        GeoPoseWithCovarianceStampedMsg msg;
+        fillGeoPoseCovData(msg, last_ins_tow);
+        fillCovarianceData(msg);
+        publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped",
+        msg);
     };
 
     float MessageHandler::getCovarianceErrorLonLat()
@@ -508,8 +441,8 @@ namespace io {
                 break;
             }
         }
-        // If the ReceiverStatus's RxError field is not 0, then at least one error
-        // has been detected.
+        // If the ReceiverStatus's RxError field is not 0, then at least one
+        // error has been detected.
         if (last_receiverstatus_.rx_error != static_cast<uint32_t>(0))
         {
             gnss_status.level = DiagnosticStatusMsg::ERROR;
@@ -1679,11 +1612,12 @@ namespace io {
     }
 
     /**
-     * The position_covariance array is populated in row-major order, where the basis
-     * of the corresponding matrix is ENU (so Cov_lonlon is in location 11 of the
-     * matrix). The B2b signal type of BeiDou is not checked for usage, since the
-     * SignalInfo field of the PVTGeodetic block does not disclose it. For that, one
-     * would need to go to the ObsInfo field of the MeasEpochChannelType1 sub-block.
+     * The position_covariance array is populated in row-major order, where the
+     * basis of the corresponding matrix is ENU (so Cov_lonlon is in location 11
+     * of the matrix). The B2b signal type of BeiDou is not checked for usage,
+     * since the SignalInfo field of the PVTGeodetic block does not disclose it.
+     * For that, one would need to go to the ObsInfo field of the
+     * MeasEpochChannelType1 sub-block.
      */
     void MessageHandler::assembleNavSatFix()
     {
@@ -1880,25 +1814,26 @@ namespace io {
     }
 
     /**
-     * Note that the field "dip" denotes the local magnetic inclination in degrees
-     * (positive when the magnetic field points downwards (into the Earth)).
-     * This quantity cannot be calculated by most Septentrio
-     * receivers. We assume that for the ROS field "err_time", we are requested to
-     * provide the 2 sigma uncertainty on the clock bias estimate in square meters,
-     * not the clock drift estimate (latter would be
+     * Note that the field "dip" denotes the local magnetic inclination in
+     * degrees (positive when the magnetic field points downwards (into the
+     * Earth)). This quantity cannot be calculated by most Septentrio receivers.
+     * We assume that for the ROS field "err_time", we are requested to provide
+     * the 2 sigma uncertainty on the clock bias estimate in square meters, not
+     * the clock drift estimate (latter would be
      * "2*std::sqrt(last_velcovgeodetic_.Cov_DtDt)").
-     * The "err_track" entry is calculated via the Gaussian error propagation formula
-     * from the eastward and the northward velocities. For the formula's usage we
-     * have to assume that the eastward and the northward velocities are independent
-     * variables. Note that elevations and azimuths of visible satellites are taken
-     * from the ChannelStatus block, which provides 1 degree precision, while the
-     * SatVisibility block could provide hundredths of degrees precision. Change if
-     * imperative for your application... Definition of "visible satellite" adopted
-     * here: We define a visible satellite as being !up to! "in sync" mode with the
-     * receiver, which corresponds to last_measepoch_.N (signal-to-noise ratios are
-     * thereby available for these), though not last_channelstatus_.N, which also
-     * includes those "in search". In case certain values appear unphysical, please
-     * consult the firmware, since those most likely refer to Do-Not-Use values.
+     * The "err_track" entry is calculated via the Gaussian error propagation
+     * formula from the eastward and the northward velocities. For the formula's
+     * usage we have to assume that the eastward and the northward velocities are
+     * independent variables. Note that elevations and azimuths of visible
+     * satellites are taken from the ChannelStatus block, which provides 1 degree
+     * precision, while the SatVisibility block could provide hundredths of
+     * degrees precision. Change if imperative for your application... Definition
+     * of "visible satellite" adopted here: We define a visible satellite as
+     * being !up to! "in sync" mode with the receiver, which corresponds to
+     * last_measepoch_.N (signal-to-noise ratios are thereby available for
+     * these), though not last_channelstatus_.N, which also includes those "in
+     * search". In case certain values appear unphysical, please consult the
+     * firmware, since those most likely refer to Do-Not-Use values.
      */
     void MessageHandler::assembleGpsFix()
     {
@@ -2001,7 +1936,8 @@ namespace io {
                 svid_pvt.reserve(channel_sat_info.stateInfo.size());
                 for (const auto& channel_state_info : channel_sat_info.stateInfo)
                 {
-                    // Define ChannelStateInfo struct for the corresponding sub-block
+                    // Define ChannelStateInfo struct for the corresponding
+                    // sub-block
                     bool pvt_status = false;
                     uint16_t pvt_status_mask = std::pow(2, 15) + std::pow(2, 14);
                     for (int k = 15; k != -1; k -= 2)
@@ -2030,8 +1966,8 @@ namespace io {
             }
         }
         msg.status.satellite_used_prn =
-            svid_pvt; // Entries such as int32[] in ROS messages are to be treated as
-                      // std::vectors.
+            svid_pvt; // Entries such as int32[] in ROS messages are to be
+                      // treated as std::vectors.
         msg.status.satellites_visible = static_cast<uint16_t>(svid_in_sync.size());
         msg.status.satellite_visible_prn = svid_in_sync_2;
         msg.status.satellite_visible_z = elevation_tracked;
@@ -2346,11 +2282,11 @@ namespace io {
         return timestampSBF(tow, wnc);
     }
 
-    /// If the current time shall be employed, it is calculated via the time(NULL)
-    /// function found in the \<ctime\> library At the time of writing the code
-    /// (2020), the GPS time was ahead of UTC time by 18 (leap) seconds. Adapt the
-    /// settings_->leap_seconds ROSaic parameter accordingly as soon as the
-    /// next leap second is inserted into the UTC time.
+    /// If the current time shall be employed, it is calculated via the
+    /// time(NULL) function found in the \<ctime\> library At the time of writing
+    /// the code (2020), the GPS time was ahead of UTC time by 18 (leap) seconds.
+    /// Adapt the settings_->leap_seconds ROSaic parameter accordingly as soon as
+    /// the next leap second is inserted into the UTC time.
     Timestamp MessageHandler::timestampSBF(uint32_t tow, uint16_t wnc) const
     {
         Timestamp time_obj;
@@ -2440,8 +2376,8 @@ namespace io {
 
         /*node_->log(log_level::DEBUG, "ROSaic reading SBF block " +
                                         std::to_string(sbfId) + " made up of " +
-                                        std::to_string(telegram->message.size()) +
-                                        " bytes...");*/
+                                        std::to_string(telegram->message.size())
+           + " bytes...");*/
 
         switch (sbfId)
         {
@@ -2478,7 +2414,7 @@ namespace io {
             assembleNavSatFix();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
-            assembleGeoPoseWithCovarianceStamped();
+            // assembleGeoPoseWithCovarianceStamped();
             if (settings_->septentrio_receiver_type == "gnss")
                 assembleGpsFix();
             if (settings_->publish_gpst &&
