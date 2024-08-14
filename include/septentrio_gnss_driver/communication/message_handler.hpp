@@ -455,12 +455,12 @@ namespace io {
         /**
          * @brief Get current covariance
          */
-        float getCovariance();
+        float getCovarianceErrorLonLat();
 
         /**
          * @brief Check covariance
          */
-        bool covarianceOutsideThreshold();
+        bool horizontalErrorOutsideThreshold();
 
         // /**
         //  * @brief Covariance estimation based on latlat and lgnlgn

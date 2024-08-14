@@ -441,25 +441,20 @@ namespace io {
         publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
     };
 
-    float MessageHandler::getCovariance()
+    float MessageHandler::getCovarianceErrorLonLat()
     {
-        return sqrt(
-            (last_poscovgeodetic_.cov_lonlon * last_poscovgeodetic_.cov_lonlon) +
-            (last_poscovgeodetic_.cov_latlat * last_poscovgeodetic_.cov_latlat));
+        return 2 * sqrt(last_poscovgeodetic_.cov_lonlon +
+                        last_poscovgeodetic_.cov_latlat);
     }
 
-    bool MessageHandler::covarianceOutsideThreshold()
+    bool MessageHandler::horizontalErrorOutsideThreshold()
     {
-        float covariance = getCovariance();
+        float covariance = getCovarianceErrorLonLat();
         float covariance_threshold;
         node_->get_parameter("covariance_threshold", covariance_threshold);
 
-        if (covariance > covariance_threshold ||
-            covariance < -covariance_threshold || std::isnan(covariance))
-        {
-            return true;
-        }
-        return false;
+        return (covariance > covariance_threshold ||
+                covariance < -covariance_threshold || std::isnan(covariance));
     }
 
     void MessageHandler::assembleDiagnosticArray(
@@ -604,11 +599,12 @@ namespace io {
         receiver_status.values[4].value =
             std::to_string(last_receiverstatus_.cpu_load);
 
-        if (covarianceOutsideThreshold())
+        if (horizontalErrorOutsideThreshold())
         {
             receiver_status.level = DiagnosticStatusMsg::ERROR;
-            receiver_status.message = "Covariance outside threshold {" +
-                                      std::to_string(getCovariance()) + "}";
+            receiver_status.message = "Covariance outside threshold: {" +
+                                      std::to_string(getCovarianceErrorLonLat()) +
+                                      "}";
         } else if ((last_receiverstatus_.rx_error & (1 << 9)))
             receiver_status.level = DiagnosticStatusMsg::ERROR;
         else if ((last_receiverstatus_.rx_status & (1 << 8)))
@@ -717,11 +713,11 @@ namespace io {
         diagOsnma.values[5].key = "GPS spoofed";
         diagOsnma.values[5].value = std::to_string(gps_spoofed);
 
-        if (covarianceOutsideThreshold())
+        if (horizontalErrorOutsideThreshold())
         {
             diagOsnma.level = DiagnosticStatusMsg::ERROR;
             diagOsnma.message = "Covariance outside threshold {" +
-                                std::to_string(getCovariance()) + "}";
+                                std::to_string(getCovarianceErrorLonLat()) + "}";
         } else if ((gal_spoofed + gps_spoofed) == 0)
             diagOsnma.level = DiagnosticStatusMsg::OK;
         else if ((gal_authentic + gps_authentic) > 0)
@@ -824,11 +820,11 @@ namespace io {
         aimMsg.wnc = last_rf_status_.block_header.wnc;
         publish<AimPlusStatusMsg>("aimplusstatus", aimMsg);
 
-        if (covarianceOutsideThreshold())
+        if (horizontalErrorOutsideThreshold())
         {
             diagRf.level = DiagnosticStatusMsg::ERROR;
             diagRf.message = "Covariance outside threshold {" +
-                             std::to_string(getCovariance()) + "}";
+                             std::to_string(getCovarianceErrorLonLat()) + "}";
         } else if (spoofed || detected)
             diagRf.level = DiagnosticStatusMsg::ERROR;
         else if (mitigated)
