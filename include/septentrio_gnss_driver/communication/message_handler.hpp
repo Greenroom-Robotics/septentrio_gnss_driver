@@ -483,11 +483,5 @@ namespace io {
          */
         template <typename T>
         void fillCovarianceData(T& msg);
-
-        geometry_msgs::msg::Point getPose();
-
-        geographic_msgs::msg::GeoPoint getGeoPose();
-
-        geometry_msgs::msg::Quaternion getOrientation();
     };
 } // namespace io

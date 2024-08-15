@@ -73,175 +73,38 @@ namespace io {
         quaternion.z = std::numeric_limits<double>::quiet_NaN();
     }
 
-    geometry_msgs::msg::Quaternion MessageHandler::getOrientation()
+    geometry_msgs::msg::Quaternion getOrientation(auto lastest_data)
     {
         geometry_msgs::msg::Quaternion orientation;
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            double yaw = last_insnavgeod_.heading;
-            double pitch = last_insnavgeod_.pitch;
-            double roll = last_insnavgeod_.roll;
+        double yaw = lastest_data.heading;
+        double pitch = lastest_data.pitch;
+        double roll = lastest_data.roll;
 
-            orientation = convertEulerToQuaternionMsg(deg2rad(roll), deg2rad(pitch),
-                                                      deg2rad(yaw));
-        } else
-        {
-            // Filling in the pose data
-            double yaw = last_atteuler_.heading;
-            double pitch = last_atteuler_.pitch;
-            double roll = last_atteuler_.roll;
+        roll = std::isnan(roll) ? 0.0 : roll;
+        pitch = std::isnan(pitch) ? 0.0 : pitch;
 
-            roll = std::isnan(roll) ? 0.0 : roll;
-            pitch = std::isnan(pitch) ? 0.0 : pitch;
-
-            orientation = convertEulerToQuaternionMsg(deg2rad(roll), deg2rad(pitch),
-                                                      deg2rad(yaw));
-        }
+        orientation =
+            convertEulerToQuaternionMsg(deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
 
         return orientation;
     }
 
-    geometry_msgs::msg::Point MessageHandler::getPose()
+    geometry_msgs::msg::Point getPose(auto lastest_data)
     {
         geometry_msgs::msg::Point point;
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            point.x = last_insnavgeod_.longitude;
-            point.y = last_insnavgeod_.latitude;
-            point.z = last_insnavgeod_.height;
-
-        } else
-        {
-            point.x = last_pvtgeodetic_.longitude;
-            point.y = last_pvtgeodetic_.latitude;
-            point.z = last_pvtgeodetic_.height;
-        }
+        point.x = lastest_data.longitude;
+        point.y = lastest_data.latitude;
+        point.z = lastest_data.height;
         return point;
     }
 
-    geographic_msgs::msg::GeoPoint MessageHandler::getGeoPose()
+    geographic_msgs::msg::GeoPoint getGeoPose(auto lastest_data)
     {
         geographic_msgs::msg::GeoPoint geo_point;
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            geo_point.latitude = rad2deg(last_insnavgeod_.latitude);
-            geo_point.longitude = rad2deg(last_insnavgeod_.longitude);
-            geo_point.altitude = last_insnavgeod_.height;
-        } else
-        {
-            geo_point.latitude = rad2deg(last_pvtgeodetic_.latitude);
-            geo_point.longitude = rad2deg(last_pvtgeodetic_.longitude);
-            geo_point.altitude = last_pvtgeodetic_.height;
-        }
+        geo_point.latitude = rad2deg(lastest_data.latitude);
+        geo_point.longitude = rad2deg(lastest_data.longitude);
+        geo_point.altitude = lastest_data.height;
         return geo_point;
-    }
-
-    void MessageHandler::fillPoseCovData(PoseWithCovarianceStampedMsg& msg,
-                                         uint32_t& last_ins_tow)
-    {
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            if (!validValue(last_insnavgeod_.block_header.tow) ||
-                (last_insnavgeod_.block_header.tow == last_ins_tow))
-                return;
-            last_ins_tow = last_insnavgeod_.block_header.tow;
-
-            msg.header = last_insnavgeod_.header;
-
-            msg.pose.pose.position = getPose();
-
-            if ((last_insnavgeod_.sb_list & 2) != 0)
-                msg.pose.pose.orientation = getOrientation();
-            else
-                setQuaternionToNaN(msg.pose.pose.orientation);
-        } else
-        {
-            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_atteuler_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_poscovgeodetic_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_attcoveuler_.block_header.tow))
-                return;
-
-            msg.header = last_pvtgeodetic_.header;
-
-            msg.pose.pose.position = getPose();
-            msg.pose.pose.orientation = getOrientation();
-        }
-    }
-
-    void MessageHandler::fillGeoPoseCovData(GeoPoseWithCovarianceStampedMsg& msg,
-                                            uint32_t& last_ins_tow)
-    {
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            if (!validValue(last_insnavgeod_.block_header.tow) ||
-                (last_insnavgeod_.block_header.tow == last_ins_tow))
-                return;
-            last_ins_tow = last_insnavgeod_.block_header.tow;
-
-            msg.header = last_insnavgeod_.header;
-
-            msg.pose.pose.position = getGeoPose();
-
-            if ((last_insnavgeod_.sb_list & 2) != 0)
-                msg.pose.pose.orientation = getOrientation();
-            else
-                setQuaternionToNaN(msg.pose.pose.orientation);
-        } else
-        {
-            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_atteuler_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_poscovgeodetic_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_attcoveuler_.block_header.tow))
-                return;
-
-            msg.header = last_pvtgeodetic_.header;
-
-            msg.pose.pose.position = getGeoPose();
-            msg.pose.pose.orientation = getOrientation();
-        }
-    }
-
-    void MessageHandler::fillGeoPoseData(GeoPoseStampedMsg& msg,
-                                         uint32_t& last_ins_tow)
-    {
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            if (!validValue(last_insnavgeod_.block_header.tow) ||
-                (last_insnavgeod_.block_header.tow == last_ins_tow))
-                return;
-            last_ins_tow = last_insnavgeod_.block_header.tow;
-
-            msg.header = last_insnavgeod_.header;
-
-            msg.pose.position = getGeoPose();
-
-            if ((last_insnavgeod_.sb_list & 2) != 0)
-                msg.pose.orientation = getOrientation();
-            else
-                setQuaternionToNaN(msg.pose.orientation);
-        } else
-        {
-            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_atteuler_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_poscovgeodetic_.block_header.tow) ||
-                (last_pvtgeodetic_.block_header.tow !=
-                 last_attcoveuler_.block_header.tow))
-                return;
-
-            msg.header = last_pvtgeodetic_.header;
-
-            msg.pose.position = getGeoPose();
-            msg.pose.orientation = getOrientation();
-        }
     }
 
     template <typename T>
@@ -348,7 +211,38 @@ namespace io {
 
         PoseWithCovarianceStampedMsg msg;
 
-        fillPoseCovData(msg, last_ins_tow);
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            if (!validValue(last_insnavgeod_.block_header.tow) ||
+                (last_insnavgeod_.block_header.tow == last_ins_tow))
+                return;
+            last_ins_tow = last_insnavgeod_.block_header.tow;
+
+            msg.header = last_insnavgeod_.header;
+
+            msg.pose.pose.position = getPose(last_insnavgeod_);
+
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.pose.orientation = getOrientation(last_insnavgeod_);
+            else
+                setQuaternionToNaN(msg.pose.pose.orientation);
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_atteuler_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_poscovgeodetic_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_attcoveuler_.block_header.tow))
+                return;
+
+            msg.header = last_pvtgeodetic_.header;
+
+            msg.pose.pose.position = getPose(last_pvtgeodetic_);
+            msg.pose.pose.orientation = getOrientation(last_atteuler_);
+        }
+
         fillCovarianceData(msg);
 
         publish<PoseWithCovarianceStampedMsg>("pose_covariance_stamped", msg);
@@ -363,7 +257,37 @@ namespace io {
 
         GeoPoseStampedMsg msg;
 
-        fillGeoPoseData(msg, last_ins_tow);
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            if (!validValue(last_insnavgeod_.block_header.tow) ||
+                (last_insnavgeod_.block_header.tow == last_ins_tow))
+                return;
+            last_ins_tow = last_insnavgeod_.block_header.tow;
+
+            msg.header = last_insnavgeod_.header;
+
+            msg.pose.position = getGeoPose(last_insnavgeod_);
+
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.orientation = getOrientation(last_insnavgeod_);
+            else
+                setQuaternionToNaN(msg.pose.orientation);
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_atteuler_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_poscovgeodetic_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_attcoveuler_.block_header.tow))
+                return;
+
+            msg.header = last_pvtgeodetic_.header;
+
+            msg.pose.position = getGeoPose(last_pvtgeodetic_);
+            msg.pose.orientation = getOrientation(last_atteuler_);
+        }
 
         publish<GeoPoseStampedMsg>("geopose_stamped", msg);
     };
@@ -376,7 +300,39 @@ namespace io {
         thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
 
         GeoPoseWithCovarianceStampedMsg msg;
-        fillGeoPoseCovData(msg, last_ins_tow);
+
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            if (!validValue(last_insnavgeod_.block_header.tow) ||
+                (last_insnavgeod_.block_header.tow == last_ins_tow))
+                return;
+            last_ins_tow = last_insnavgeod_.block_header.tow;
+
+            msg.header = last_insnavgeod_.header;
+
+            msg.pose.pose.position = getGeoPose(last_insnavgeod_);
+
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.pose.orientation = getOrientation(last_insnavgeod_);
+            else
+                setQuaternionToNaN(msg.pose.pose.orientation);
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_atteuler_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_poscovgeodetic_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_attcoveuler_.block_header.tow))
+                return;
+
+            msg.header = last_pvtgeodetic_.header;
+
+            msg.pose.pose.position = getGeoPose(last_pvtgeodetic_);
+            msg.pose.pose.orientation = getOrientation(last_atteuler_);
+        }
+
         fillCovarianceData(msg);
         publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
     };
