@@ -156,12 +156,10 @@ namespace io {
             if ((last_insnavgeod_.sb_list & 64) != 0)
             {
                 // Attitude cov
-                covariance[22] =
-                    convertCovariance(last_insnavgeod_.pitch_roll_cov);
+                covariance[22] = convertCovariance(last_insnavgeod_.pitch_roll_cov);
                 covariance[23] =
                     convertCovariance(last_insnavgeod_.heading_roll_cov);
-                covariance[27] =
-                    convertCovariance(last_insnavgeod_.pitch_roll_cov);
+                covariance[27] = convertCovariance(last_insnavgeod_.pitch_roll_cov);
                 covariance[29] =
                     convertCovariance(last_insnavgeod_.heading_pitch_cov);
                 covariance[33] =
@@ -181,27 +179,139 @@ namespace io {
             covariance[12] = last_poscovgeodetic_.cov_lonhgt;
             covariance[13] = last_poscovgeodetic_.cov_lathgt;
             covariance[14] = last_poscovgeodetic_.cov_hgthgt;
-            covariance[21] =
-                convertAutoCovariance(last_attcoveuler_.cov_rollroll);
-            covariance[22] =
-                convertCovariance(last_attcoveuler_.cov_pitchroll);
-            covariance[23] =
-                convertCovariance(last_attcoveuler_.cov_headroll);
-            covariance[27] =
-                convertCovariance(last_attcoveuler_.cov_pitchroll);
-            covariance[28] =
-                convertAutoCovariance(last_attcoveuler_.cov_pitchpitch);
-            covariance[29] =
-                convertCovariance(last_attcoveuler_.cov_headpitch);
-            covariance[33] =
-                convertCovariance(last_attcoveuler_.cov_headroll);
-            covariance[34] =
-                convertCovariance(last_attcoveuler_.cov_headpitch);
-            covariance[35] =
-                convertAutoCovariance(last_attcoveuler_.cov_headhead);
+            covariance[21] = convertAutoCovariance(last_attcoveuler_.cov_rollroll);
+            covariance[22] = convertCovariance(last_attcoveuler_.cov_pitchroll);
+            covariance[23] = convertCovariance(last_attcoveuler_.cov_headroll);
+            covariance[27] = convertCovariance(last_attcoveuler_.cov_pitchroll);
+            covariance[28] = convertAutoCovariance(last_attcoveuler_.cov_pitchpitch);
+            covariance[29] = convertCovariance(last_attcoveuler_.cov_headpitch);
+            covariance[33] = convertCovariance(last_attcoveuler_.cov_headroll);
+            covariance[34] = convertCovariance(last_attcoveuler_.cov_headpitch);
+            covariance[35] = convertAutoCovariance(last_attcoveuler_.cov_headhead);
         }
 
         return covariance;
+    }
+
+    void MessageHandler::assemblePoseStamped()
+    {
+        if (!settings_->publish_pose_stamped)
+            return;
+
+        thread_local auto last_ins_tow = last_insnavgeod_.block_header.tow;
+
+        PoseStampedMsg msg;
+
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            if (!validValue(last_insnavgeod_.block_header.tow) ||
+                (last_insnavgeod_.block_header.tow == last_ins_tow))
+                return;
+            last_ins_tow = last_insnavgeod_.block_header.tow;
+
+            msg.header = last_insnavgeod_.header;
+
+            msg.pose.position = getPose(last_insnavgeod_);
+
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.orientation = getOrientation(last_insnavgeod_);
+            else
+                setQuaternionToNaN(msg.pose.orientation);
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_atteuler_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_poscovgeodetic_.block_header.tow) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_attcoveuler_.block_header.tow))
+                return;
+
+            msg.header = last_pvtgeodetic_.header;
+
+            msg.pose.position = getPose(last_pvtgeodetic_);
+            msg.pose.orientation = getOrientation(last_atteuler_);
+        }
+
+        publish<PoseStampedMsg>("pose_stamped", msg);
+    }
+
+    void setTwistLinearToNaN(Vector3Msg& twist_linear)
+    {
+        twist_linear.x = std::numeric_limits<double>::quiet_NaN();
+        twist_linear.y = std::numeric_limits<double>::quiet_NaN();
+        twist_linear.z = std::numeric_limits<double>::quiet_NaN();
+    }
+
+    Vector3Msg getTwistLinear(const auto& lastest_data, bool use_ros_axis_orientation)
+    {
+        Vector3Msg twist_linear;
+        // Linear velocity in navigation frame
+        double ve = lastest_data.ve;
+        double vn = lastest_data.vn;
+        double vu = lastest_data.vu;
+        if (use_ros_axis_orientation)
+        {
+            // (ENU)
+            twist_linear.x = ve;
+            twist_linear.y = vn;
+            twist_linear.z = vu;
+        } else
+        {
+            // (NED)
+            twist_linear.x = vn;
+            twist_linear.y = ve;
+            twist_linear.z = -vu;
+        }
+
+        return twist_linear;
+    }
+
+    void MessageHandler::assembleTwistStamped(bool fromIns /* = false*/)
+    {
+        if (!settings_->publish_twist_stamped)
+            return;
+        TwistStampedMsg msg;
+
+        // Set angular velocities to NaN
+        msg.twist.angular.x = std::numeric_limits<double>::quiet_NaN();
+        msg.twist.angular.y = std::numeric_limits<double>::quiet_NaN();
+        msg.twist.angular.z = std::numeric_limits<double>::quiet_NaN();
+
+        if (fromIns)
+        {
+            msg.header = last_insnavgeod_.header;
+
+            if ((last_insnavgeod_.sb_list & 8) != 0)
+            {
+                // Linear velocity
+                msg.twist.linear = getTwistLinear(last_insnavgeod_, settings_->use_ros_axis_orientation);
+            } else
+            {
+                setTwistLinearToNaN(msg.twist.linear);
+            }
+
+            publish<TwistStampedMsg>("twist_stamped_ins", msg);
+        } else
+        {
+            if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
+                (last_pvtgeodetic_.block_header.tow !=
+                 last_velcovgeodetic_.block_header.tow))
+                return;
+            msg.header = last_pvtgeodetic_.header;
+
+            if (last_pvtgeodetic_.error == 0)
+            {
+                // Linear velocity
+                msg.twist.linear = getTwistLinear(last_pvtgeodetic_, settings_->use_ros_axis_orientation);
+            } else
+            {
+                setTwistLinearToNaN(msg.twist.linear);
+            }
+
+            publish<TwistStampedMsg>("twist_stamped_gnss", msg);
+        }
     }
 
     void MessageHandler::assemblePoseWithCovarianceStamped()
@@ -856,29 +966,11 @@ namespace io {
 
             if ((last_insnavgeod_.sb_list & 8) != 0)
             {
-                // Linear velocity in navigation frame
-                double ve = last_insnavgeod_.ve;
-                double vn = last_insnavgeod_.vn;
-                double vu = last_insnavgeod_.vu;
-                Eigen::Vector3d vel;
-                if (settings_->use_ros_axis_orientation)
-                {
-                    // (ENU)
-                    vel << ve, vn, vu;
-                } else
-                {
-                    // (NED)
-                    vel << vn, ve, -vu;
-                }
                 // Linear velocity
-                msg.twist.twist.linear.x = vel(0);
-                msg.twist.twist.linear.y = vel(1);
-                msg.twist.twist.linear.z = vel(2);
+                msg.twist.twist.linear = getTwistLinear(last_insnavgeod_, settings_->use_ros_axis_orientation);
             } else
             {
-                msg.twist.twist.linear.x = std::numeric_limits<double>::quiet_NaN();
-                msg.twist.twist.linear.y = std::numeric_limits<double>::quiet_NaN();
-                msg.twist.twist.linear.z = std::numeric_limits<double>::quiet_NaN();
+                setTwistLinearToNaN(msg.twist.twist.linear);
             }
 
             if (((last_insnavgeod_.sb_list & 16) != 0) &&
@@ -962,29 +1054,11 @@ namespace io {
 
             if (last_pvtgeodetic_.error == 0)
             {
-                // Linear velocity in navigation frame
-                double ve = last_pvtgeodetic_.ve;
-                double vn = last_pvtgeodetic_.vn;
-                double vu = last_pvtgeodetic_.vu;
-                Eigen::Vector3d vel;
-                if (settings_->use_ros_axis_orientation)
-                {
-                    // (ENU)
-                    vel << ve, vn, vu;
-                } else
-                {
-                    // (NED)
-                    vel << vn, ve, -vu;
-                }
                 // Linear velocity
-                msg.twist.twist.linear.x = vel(0);
-                msg.twist.twist.linear.y = vel(1);
-                msg.twist.twist.linear.z = vel(2);
+                msg.twist.twist.linear = getTwistLinear(last_pvtgeodetic_, settings_->use_ros_axis_orientation);
             } else
             {
-                msg.twist.twist.linear.x = std::numeric_limits<double>::quiet_NaN();
-                msg.twist.twist.linear.y = std::numeric_limits<double>::quiet_NaN();
-                msg.twist.twist.linear.z = std::numeric_limits<double>::quiet_NaN();
+                setTwistLinearToNaN(msg.twist.twist.linear);
             }
 
             if (last_velcovgeodetic_.error == 0)
@@ -2377,7 +2451,9 @@ namespace io {
             if (settings_->publish_pvtgeodetic)
                 publish<PVTGeodeticMsg>("pvtgeodetic", last_pvtgeodetic_);
             assembleTwist();
+            assembleTwistStamped();
             assembleNavSatFix();
+            assemblePoseStamped();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
             assembleGeoPoseWithCovarianceStamped();
@@ -2451,6 +2527,7 @@ namespace io {
             if (settings_->publish_poscovgeodetic)
                 publish<PosCovGeodeticMsg>("poscovgeodetic", last_poscovgeodetic_);
             assembleNavSatFix();
+            assemblePoseStamped();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
             assembleGeoPoseWithCovarianceStamped();
@@ -2470,6 +2547,7 @@ namespace io {
             assembleHeader(settings_->frame_id, telegram, last_atteuler_);
             if (settings_->publish_atteuler)
                 publish<AttEulerMsg>("atteuler", last_atteuler_);
+            assemblePoseStamped();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
             assembleGeoPoseWithCovarianceStamped();
@@ -2489,6 +2567,7 @@ namespace io {
             assembleHeader(settings_->frame_id, telegram, last_attcoveuler_);
             if (settings_->publish_attcoveuler)
                 publish<AttCovEulerMsg>("attcoveuler", last_attcoveuler_);
+            assemblePoseStamped();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
             assembleGeoPoseWithCovarianceStamped();
@@ -2577,6 +2656,8 @@ namespace io {
             assembleLocalizationUtm();
             assembleLocalizationEcef();
             assembleTwist(true);
+            assembleTwistStamped(true);
+            assemblePoseStamped();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
             assembleGeoPoseWithCovarianceStamped();
@@ -2765,6 +2846,7 @@ namespace io {
             if (settings_->publish_velcovgeodetic)
                 publish<VelCovGeodeticMsg>("velcovgeodetic", last_velcovgeodetic_);
             assembleTwist();
+            assembleTwistStamped();
             if (settings_->septentrio_receiver_type == "gnss")
                 assembleGpsFix();
             break;

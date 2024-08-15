@@ -172,6 +172,7 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
     param("publish.navsatfix", settings_.publish_navsatfix, true);
     param("publish.gpsfix", settings_.publish_gpsfix, false);
     param("publish.pose", settings_.publish_pose, false);
+    param("publish.pose_stamped", settings_.publish_pose_stamped, false);
     param("publish.geopose_stamped", settings_.publish_geopose_stamped, false);
     param("publish.geopose_covariance_stamped", settings_.publish_geopose_covariance_stamped, false);
     param("publish.diagnostics", settings_.publish_diagnostics, false);
@@ -203,6 +204,7 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
     param("publish.localization", settings_.publish_localization, false);
     param("publish.localization_ecef", settings_.publish_localization_ecef, false);
     param("publish.twist", settings_.publish_twist, false);
+    param("publish.twist_stamped", settings_.publish_twist_stamped, false);
     param("publish.tf", settings_.publish_tf, false);
     param("publish.tf_ecef", settings_.publish_tf_ecef, false);
 

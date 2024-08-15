@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(septentrio_gnss_driver)
 
-## Compile as C++17
+## Compile as C++20
 add_compile_options(-std=c++20)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

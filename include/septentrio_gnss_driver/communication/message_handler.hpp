@@ -467,5 +467,15 @@ namespace io {
          * @brief Get covariance data
          */
         std::array<double, 36> getCovarianceData();
+
+        /**
+         * @brief Assemble PoseStamped message
+         */
+        void assemblePoseStamped();
+
+        /**
+         * @brief Assemble TwistStamped message
+         */
+        void assembleTwistStamped(bool fromIns = false); 
     };
 } // namespace io

@@ -51,10 +51,13 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
 
 #include <geographic_msgs/msg/geo_pose_with_covariance_stamped.hpp>
 #include <geographic_msgs/msg/geo_pose_stamped.hpp>
@@ -112,9 +115,12 @@ typedef rclcpp::Time TimestampRos;
 typedef diagnostic_msgs::msg::DiagnosticArray DiagnosticArrayMsg;
 typedef diagnostic_msgs::msg::DiagnosticStatus DiagnosticStatusMsg;
 typedef geometry_msgs::msg::Quaternion QuaternionMsg;
+typedef geometry_msgs::msg::PoseStamped PoseStampedMsg;
 typedef geometry_msgs::msg::PoseWithCovarianceStamped PoseWithCovarianceStampedMsg;
+typedef geometry_msgs::msg::TwistStamped TwistStampedMsg;
 typedef geometry_msgs::msg::TwistWithCovarianceStamped TwistWithCovarianceStampedMsg;
 typedef geometry_msgs::msg::TransformStamped TransformStampedMsg;
+typedef geometry_msgs::msg::Vector3 Vector3Msg;
 
 typedef geographic_msgs::msg::GeoPoseStamped GeoPoseStampedMsg;
 typedef geographic_msgs::msg::GeoPoseWithCovarianceStamped GeoPoseWithCovarianceStampedMsg;
