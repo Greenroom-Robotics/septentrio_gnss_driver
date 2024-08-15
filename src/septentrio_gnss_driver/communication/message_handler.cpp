@@ -107,99 +107,101 @@ namespace io {
         return geo_point;
     }
 
-    template <typename T>
-    void MessageHandler::fillCovarianceData(T& msg)
+    std::array<double, 36> MessageHandler::getCovarianceData()
     {
+        std::array<double, 36> covariance;
         if (settings_->septentrio_receiver_type == "ins")
         {
             // Filling in the pose data
             if ((last_insnavgeod_.sb_list & 1) != 0)
             {
                 // Pos autocov
-                msg.pose.covariance[0] = square(last_insnavgeod_.longitude_std_dev);
-                msg.pose.covariance[7] = square(last_insnavgeod_.latitude_std_dev);
-                msg.pose.covariance[14] = square(last_insnavgeod_.height_std_dev);
+                covariance[0] = square(last_insnavgeod_.longitude_std_dev);
+                covariance[7] = square(last_insnavgeod_.latitude_std_dev);
+                covariance[14] = square(last_insnavgeod_.height_std_dev);
             } else
             {
-                msg.pose.covariance[0] = -1.0;
-                msg.pose.covariance[7] = -1.0;
-                msg.pose.covariance[14] = -1.0;
+                covariance[0] = -1.0;
+                covariance[7] = -1.0;
+                covariance[14] = -1.0;
             }
 
             if ((last_insnavgeod_.sb_list & 4) != 0)
             {
                 // Attitude autocov
-                msg.pose.covariance[21] =
+                covariance[21] =
                     convertAutoCovariance(last_insnavgeod_.roll_std_dev);
-                msg.pose.covariance[28] =
+                covariance[28] =
                     convertAutoCovariance(last_insnavgeod_.pitch_std_dev);
-                msg.pose.covariance[35] =
+                covariance[35] =
                     convertAutoCovariance(last_insnavgeod_.heading_std_dev);
             } else
             {
-                msg.pose.covariance[21] = -1.0;
-                msg.pose.covariance[28] = -1.0;
-                msg.pose.covariance[35] = -1.0;
+                covariance[21] = -1.0;
+                covariance[28] = -1.0;
+                covariance[35] = -1.0;
             }
 
             if ((last_insnavgeod_.sb_list & 32) != 0)
             {
                 // Pos cov
-                msg.pose.covariance[1] = last_insnavgeod_.latitude_longitude_cov;
-                msg.pose.covariance[2] = last_insnavgeod_.longitude_height_cov;
-                msg.pose.covariance[6] = last_insnavgeod_.latitude_longitude_cov;
-                msg.pose.covariance[8] = last_insnavgeod_.latitude_height_cov;
-                msg.pose.covariance[12] = last_insnavgeod_.longitude_height_cov;
-                msg.pose.covariance[13] = last_insnavgeod_.latitude_height_cov;
+                covariance[1] = last_insnavgeod_.latitude_longitude_cov;
+                covariance[2] = last_insnavgeod_.longitude_height_cov;
+                covariance[6] = last_insnavgeod_.latitude_longitude_cov;
+                covariance[8] = last_insnavgeod_.latitude_height_cov;
+                covariance[12] = last_insnavgeod_.longitude_height_cov;
+                covariance[13] = last_insnavgeod_.latitude_height_cov;
             }
 
             if ((last_insnavgeod_.sb_list & 64) != 0)
             {
                 // Attitude cov
-                msg.pose.covariance[22] =
+                covariance[22] =
                     convertCovariance(last_insnavgeod_.pitch_roll_cov);
-                msg.pose.covariance[23] =
+                covariance[23] =
                     convertCovariance(last_insnavgeod_.heading_roll_cov);
-                msg.pose.covariance[27] =
+                covariance[27] =
                     convertCovariance(last_insnavgeod_.pitch_roll_cov);
-                msg.pose.covariance[29] =
+                covariance[29] =
                     convertCovariance(last_insnavgeod_.heading_pitch_cov);
-                msg.pose.covariance[33] =
+                covariance[33] =
                     convertCovariance(last_insnavgeod_.heading_roll_cov);
-                msg.pose.covariance[34] =
+                covariance[34] =
                     convertCovariance(last_insnavgeod_.heading_pitch_cov);
             }
         } else
         {
             // Filling in the covariance data in row-major order
-            msg.pose.covariance[0] = last_poscovgeodetic_.cov_lonlon;
-            msg.pose.covariance[1] = last_poscovgeodetic_.cov_latlon;
-            msg.pose.covariance[2] = last_poscovgeodetic_.cov_lonhgt;
-            msg.pose.covariance[6] = last_poscovgeodetic_.cov_latlon;
-            msg.pose.covariance[7] = last_poscovgeodetic_.cov_latlat;
-            msg.pose.covariance[8] = last_poscovgeodetic_.cov_lathgt;
-            msg.pose.covariance[12] = last_poscovgeodetic_.cov_lonhgt;
-            msg.pose.covariance[13] = last_poscovgeodetic_.cov_lathgt;
-            msg.pose.covariance[14] = last_poscovgeodetic_.cov_hgthgt;
-            msg.pose.covariance[21] =
+            covariance[0] = last_poscovgeodetic_.cov_lonlon;
+            covariance[1] = last_poscovgeodetic_.cov_latlon;
+            covariance[2] = last_poscovgeodetic_.cov_lonhgt;
+            covariance[6] = last_poscovgeodetic_.cov_latlon;
+            covariance[7] = last_poscovgeodetic_.cov_latlat;
+            covariance[8] = last_poscovgeodetic_.cov_lathgt;
+            covariance[12] = last_poscovgeodetic_.cov_lonhgt;
+            covariance[13] = last_poscovgeodetic_.cov_lathgt;
+            covariance[14] = last_poscovgeodetic_.cov_hgthgt;
+            covariance[21] =
                 convertAutoCovariance(last_attcoveuler_.cov_rollroll);
-            msg.pose.covariance[22] =
+            covariance[22] =
                 convertCovariance(last_attcoveuler_.cov_pitchroll);
-            msg.pose.covariance[23] =
+            covariance[23] =
                 convertCovariance(last_attcoveuler_.cov_headroll);
-            msg.pose.covariance[27] =
+            covariance[27] =
                 convertCovariance(last_attcoveuler_.cov_pitchroll);
-            msg.pose.covariance[28] =
+            covariance[28] =
                 convertAutoCovariance(last_attcoveuler_.cov_pitchpitch);
-            msg.pose.covariance[29] =
+            covariance[29] =
                 convertCovariance(last_attcoveuler_.cov_headpitch);
-            msg.pose.covariance[33] =
+            covariance[33] =
                 convertCovariance(last_attcoveuler_.cov_headroll);
-            msg.pose.covariance[34] =
+            covariance[34] =
                 convertCovariance(last_attcoveuler_.cov_headpitch);
-            msg.pose.covariance[35] =
+            covariance[35] =
                 convertAutoCovariance(last_attcoveuler_.cov_headhead);
         }
+
+        return covariance;
     }
 
     void MessageHandler::assemblePoseWithCovarianceStamped()
@@ -243,7 +245,7 @@ namespace io {
             msg.pose.pose.orientation = getOrientation(last_atteuler_);
         }
 
-        fillCovarianceData(msg);
+        msg.pose.covariance = getCovarianceData();
 
         publish<PoseWithCovarianceStampedMsg>("pose_covariance_stamped", msg);
     };
@@ -333,7 +335,8 @@ namespace io {
             msg.pose.pose.orientation = getOrientation(last_atteuler_);
         }
 
-        fillCovarianceData(msg);
+        msg.pose.covariance = getCovarianceData();
+
         publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
     };
 

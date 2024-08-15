@@ -63,6 +63,7 @@
 #include <cstddef>
 #include <map>
 #include <sstream>
+#include <array>
 // Boost includes
 #include <boost/call_traits.hpp>
 #include <boost/format.hpp>
@@ -463,25 +464,8 @@ namespace io {
         bool horizontalErrorOutsideThreshold();
 
         /**
-         * @brief Fill PoseWithCovarianceStampedMsg message with pose data
+         * @brief Get covariance data
          */
-        void fillPoseCovData(PoseWithCovarianceStampedMsg& msg, uint32_t& last_ins_tow);
-
-        /**
-         * @brief Fill GeoPoseWithCovarianceStampedMsg message with pose data
-         */
-        void fillGeoPoseCovData(GeoPoseWithCovarianceStampedMsg& msg,
-                                uint32_t& last_ins_tow);
-
-        /**
-         * @brief Fill GeoPoseStampedMsg message with pose data
-         */
-        void fillGeoPoseData(GeoPoseStampedMsg& msg, uint32_t& last_ins_tow);
-
-        /**
-         * @brief Fill message with covariance data
-         */
-        template <typename T>
-        void fillCovarianceData(T& msg);
+        std::array<double, 36> getCovarianceData();
     };
 } // namespace io
