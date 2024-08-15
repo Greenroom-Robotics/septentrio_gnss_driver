@@ -65,8 +65,79 @@ namespace io {
         return std::isnan(val) ? 0.0 : deg2radSq(val);
     }
 
+    void setQuaternionToNaN(geometry_msgs::msg::Quaternion& quaternion)
+    {
+        quaternion.w = std::numeric_limits<double>::quiet_NaN();
+        quaternion.x = std::numeric_limits<double>::quiet_NaN();
+        quaternion.y = std::numeric_limits<double>::quiet_NaN();
+        quaternion.z = std::numeric_limits<double>::quiet_NaN();
+    }
+
+    geometry_msgs::msg::Quaternion MessageHandler::getOrientation()
+    {
+        geometry_msgs::msg::Quaternion orientation;
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            double yaw = last_insnavgeod_.heading;
+            double pitch = last_insnavgeod_.pitch;
+            double roll = last_insnavgeod_.roll;
+
+            orientation = convertEulerToQuaternionMsg(deg2rad(roll), deg2rad(pitch),
+                                                      deg2rad(yaw));
+        } else
+        {
+            // Filling in the pose data
+            double yaw = last_atteuler_.heading;
+            double pitch = last_atteuler_.pitch;
+            double roll = last_atteuler_.roll;
+
+            roll = std::isnan(roll) ? 0.0 : roll;
+            pitch = std::isnan(pitch) ? 0.0 : pitch;
+
+            orientation = convertEulerToQuaternionMsg(deg2rad(roll), deg2rad(pitch),
+                                                      deg2rad(yaw));
+        }
+
+        return orientation;
+    }
+
+    geometry_msgs::msg::Point MessageHandler::getPose()
+    {
+        geometry_msgs::msg::Point point;
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            point.x = last_insnavgeod_.longitude;
+            point.y = last_insnavgeod_.latitude;
+            point.z = last_insnavgeod_.height;
+
+        } else
+        {
+            point.x = last_pvtgeodetic_.longitude;
+            point.y = last_pvtgeodetic_.latitude;
+            point.z = last_pvtgeodetic_.height;
+        }
+        return point;
+    }
+
+    geographic_msgs::msg::GeoPoint MessageHandler::getGeoPose()
+    {
+        geographic_msgs::msg::GeoPoint geo_point;
+        if (settings_->septentrio_receiver_type == "ins")
+        {
+            geo_point.latitude = rad2deg(last_insnavgeod_.latitude);
+            geo_point.longitude = rad2deg(last_insnavgeod_.longitude);
+            geo_point.altitude = last_insnavgeod_.height;
+        } else
+        {
+            geo_point.latitude = rad2deg(last_pvtgeodetic_.latitude);
+            geo_point.longitude = rad2deg(last_pvtgeodetic_.longitude);
+            geo_point.altitude = last_pvtgeodetic_.height;
+        }
+        return geo_point;
+    }
+
     void MessageHandler::fillPoseCovData(PoseWithCovarianceStampedMsg& msg,
-                                      uint32_t& last_ins_tow)
+                                         uint32_t& last_ins_tow)
     {
         if (settings_->septentrio_receiver_type == "ins")
         {
@@ -77,21 +148,12 @@ namespace io {
 
             msg.header = last_insnavgeod_.header;
 
-            msg.pose.pose.position.x = rad2deg(last_insnavgeod_.longitude);
-            msg.pose.pose.position.y = rad2deg(last_insnavgeod_.latitude);
-            msg.pose.pose.position.z = last_insnavgeod_.height;
+            msg.pose.pose.position = getPose();
 
-            if ((last_insnavgeod_.sb_list & 2) == 0)
-            {
-                msg.pose.pose.orientation.w =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.x =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.y =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.z =
-                    std::numeric_limits<double>::quiet_NaN();
-            }
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.pose.orientation = getOrientation();
+            else
+                setQuaternionToNaN(msg.pose.pose.orientation);
         } else
         {
             if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
@@ -105,19 +167,8 @@ namespace io {
 
             msg.header = last_pvtgeodetic_.header;
 
-            // Filling in the pose data
-            double yaw = last_atteuler_.heading;
-            double pitch = last_atteuler_.pitch;
-            double roll = last_atteuler_.roll;
-
-            roll = std::isnan(roll) ? 0.0 : roll;
-            pitch = std::isnan(pitch) ? 0.0 : pitch;
-
-            msg.pose.pose.orientation = convertEulerToQuaternionMsg(
-                deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            msg.pose.pose.position.x = rad2deg(last_pvtgeodetic_.longitude);
-            msg.pose.pose.position.y = rad2deg(last_pvtgeodetic_.latitude);
-            msg.pose.pose.position.z = last_pvtgeodetic_.height;
+            msg.pose.pose.position = getPose();
+            msg.pose.pose.orientation = getOrientation();
         }
     }
 
@@ -133,21 +184,12 @@ namespace io {
 
             msg.header = last_insnavgeod_.header;
 
-            msg.pose.pose.position.latitude = last_insnavgeod_.latitude;
-            msg.pose.pose.position.longitude = last_insnavgeod_.longitude;
-            msg.pose.pose.position.altitude = last_insnavgeod_.height;
+            msg.pose.pose.position = getGeoPose();
 
-            if ((last_insnavgeod_.sb_list & 2) == 0)
-            {
-                msg.pose.pose.orientation.w =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.x =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.y =
-                    std::numeric_limits<double>::quiet_NaN();
-                msg.pose.pose.orientation.z =
-                    std::numeric_limits<double>::quiet_NaN();
-            }
+            if ((last_insnavgeod_.sb_list & 2) != 0)
+                msg.pose.pose.orientation = getOrientation();
+            else
+                setQuaternionToNaN(msg.pose.pose.orientation);
         } else
         {
             if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
@@ -161,23 +203,13 @@ namespace io {
 
             msg.header = last_pvtgeodetic_.header;
 
-            // Filling in the pose data
-            double yaw = last_atteuler_.heading;
-            double pitch = last_atteuler_.pitch;
-            double roll = last_atteuler_.roll;
-
-            roll = std::isnan(roll) ? 0.0 : roll;
-            pitch = std::isnan(pitch) ? 0.0 : pitch;
-
-            msg.pose.pose.orientation = convertEulerToQuaternionMsg(
-                deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            msg.pose.pose.position.latitude = last_insnavgeod_.latitude;
-            msg.pose.pose.position.longitude = last_insnavgeod_.longitude;
-            msg.pose.pose.position.altitude = last_insnavgeod_.height;
+            msg.pose.pose.position = getGeoPose();
+            msg.pose.pose.orientation = getOrientation();
         }
     }
 
-    void MessageHandler::fillGeoPoseData(GeoPoseStampedMsg& msg, uint32_t& last_ins_tow)
+    void MessageHandler::fillGeoPoseData(GeoPoseStampedMsg& msg,
+                                         uint32_t& last_ins_tow)
     {
         if (settings_->septentrio_receiver_type == "ins")
         {
@@ -188,25 +220,12 @@ namespace io {
 
             msg.header = last_insnavgeod_.header;
 
-            msg.pose.position.latitude = last_insnavgeod_.latitude;
-            msg.pose.position.longitude = last_insnavgeod_.longitude;
-            msg.pose.position.altitude = last_insnavgeod_.height;
+            msg.pose.position = getGeoPose();
 
             if ((last_insnavgeod_.sb_list & 2) != 0)
-            {
-                double yaw = last_insnavgeod_.heading;
-                double pitch = last_insnavgeod_.pitch;
-                double roll = last_insnavgeod_.roll;
-                // Attitude
-                msg.pose.orientation = convertEulerToQuaternionMsg(
-                    deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            } else
-            {
-                msg.pose.orientation.w = std::numeric_limits<double>::quiet_NaN();
-                msg.pose.orientation.x = std::numeric_limits<double>::quiet_NaN();
-                msg.pose.orientation.y = std::numeric_limits<double>::quiet_NaN();
-                msg.pose.orientation.z = std::numeric_limits<double>::quiet_NaN();
-            }
+                msg.pose.orientation = getOrientation();
+            else
+                setQuaternionToNaN(msg.pose.orientation);
         } else
         {
             if ((!validValue(last_pvtgeodetic_.block_header.tow)) ||
@@ -220,19 +239,8 @@ namespace io {
 
             msg.header = last_pvtgeodetic_.header;
 
-            // Filling in the pose data
-            double yaw = last_atteuler_.heading;
-            double pitch = last_atteuler_.pitch;
-            double roll = last_atteuler_.roll;
-
-            roll = std::isnan(roll) ? 0.0 : roll;
-            pitch = std::isnan(pitch) ? 0.0 : pitch;
-
-            msg.pose.orientation = convertEulerToQuaternionMsg(
-                deg2rad(roll), deg2rad(pitch), deg2rad(yaw));
-            msg.pose.position.latitude = last_pvtgeodetic_.latitude;
-            msg.pose.position.longitude = last_pvtgeodetic_.longitude;
-            msg.pose.position.altitude = last_pvtgeodetic_.height;
+            msg.pose.position = getGeoPose();
+            msg.pose.orientation = getOrientation();
         }
     }
 
@@ -370,8 +378,7 @@ namespace io {
         GeoPoseWithCovarianceStampedMsg msg;
         fillGeoPoseCovData(msg, last_ins_tow);
         fillCovarianceData(msg);
-        publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped",
-        msg);
+        publish<GeoPoseWithCovarianceStampedMsg>("geopose_covariance_stamped", msg);
     };
 
     float MessageHandler::getCovarianceErrorLonLat()
@@ -2414,7 +2421,7 @@ namespace io {
             assembleNavSatFix();
             assemblePoseWithCovarianceStamped();
             assembleGeoPoseStamped();
-            // assembleGeoPoseWithCovarianceStamped();
+            assembleGeoPoseWithCovarianceStamped();
             if (settings_->septentrio_receiver_type == "gnss")
                 assembleGpsFix();
             if (settings_->publish_gpst &&

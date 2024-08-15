@@ -52,11 +52,13 @@
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 
 #include <geographic_msgs/msg/geo_pose_with_covariance_stamped.hpp>
 #include <geographic_msgs/msg/geo_pose_stamped.hpp>
+#include <geographic_msgs/msg/geo_point.hpp>
 
 #include <gps_msgs/msg/gps_fix.hpp>
 #include <nav_msgs/msg/odometry.hpp>
