@@ -149,7 +149,7 @@ def generate_launch_description():
             "velcovgeodetic": False,
             "atteuler": False,
             "attcoveuler": False,
-            "pose": False,
+            "pose": True, # Needs to be true for other pose messages to be published. TODO: Fix this in future, some changes made but not working like they did for twist_stamped
             "pose_stamped": True,
             "geopose_stamped": True,
             "geopose_covariance_stamped": False,
