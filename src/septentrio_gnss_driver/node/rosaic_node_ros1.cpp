@@ -380,7 +380,14 @@ rosaic_node::ROSaicNode::ROSaicNode() : IO_(this)
                 "Pitch angle output by topic /atteuler is a tilt angle rotated by " +
                     std::to_string(settings_.heading_offset) + ".");
         }
-        if (settings_.publish_pose && (settings_.septentrio_receiver_type == "gnss"))
+        if (settings_.publish_pose &&
+                (settings_.septentrio_receiver_type == "gnss") ||
+            settings_.publish_pose_stamped &&
+                (settings_.septentrio_receiver_type == "gnss") ||
+            settings_.publish_geopose_stamped &&
+                (settings_.septentrio_receiver_type == "gnss") ||
+            settings_.publish_geopose_covariance_stamped &&
+                (settings_.septentrio_receiver_type == "gnss"))
         {
             this->log(
                 log_level::WARN,

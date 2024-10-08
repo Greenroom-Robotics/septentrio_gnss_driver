@@ -253,7 +253,8 @@ namespace io {
         {
             if (!client || settings_->configure_rx ||
                 (settings_->ins_vsm.ros_source == "odometry") ||
-                (settings_->ins_vsm.ros_source == "twist"))
+                (settings_->ins_vsm.ros_source == "twist") ||
+                (settings_->ins_vsm.ros_source == "twist_stamped"))
             {
                 node_->log(log_level::DEBUG, "Unsupported device.");
                 return false;
@@ -832,7 +833,7 @@ namespace io {
             {
                 blocks << " +PVTCartesian";
             }
-            if (settings_->publish_pvtgeodetic || settings_->publish_twist ||
+            if (settings_->publish_pvtgeodetic || settings_->publish_twist || settings_->publish_twist_stamped ||
                 (settings_->publish_gpst &&
                  (settings_->septentrio_receiver_type == "gnss")) ||
                 (settings_->publish_navsatfix &&
@@ -840,6 +841,12 @@ namespace io {
                 (settings_->publish_gpsfix &&
                  (settings_->septentrio_receiver_type == "gnss")) ||
                 (settings_->publish_pose &&
+                 (settings_->septentrio_receiver_type == "gnss")) ||
+                (settings_->publish_pose_stamped &&
+                 (settings_->septentrio_receiver_type == "gnss")) ||
+                (settings_->publish_geopose_stamped &&
+                 (settings_->septentrio_receiver_type == "gnss")) ||
+                (settings_->publish_geopose_covariance_stamped &&
                  (settings_->septentrio_receiver_type == "gnss")) ||
                 settings_->latency_compensation)
             {
@@ -871,7 +878,7 @@ namespace io {
             {
                 blocks << " +VelCovCartesian";
             }
-            if (settings_->publish_velcovgeodetic || settings_->publish_twist ||
+            if (settings_->publish_velcovgeodetic || settings_->publish_twist || settings_->publish_twist_stamped ||
                 (settings_->publish_gpsfix &&
                  (settings_->septentrio_receiver_type == "gnss")))
             {
@@ -912,9 +919,10 @@ namespace io {
                     blocks << " +INSNavCart";
                 }
                 if (settings_->publish_insnavgeod || settings_->publish_navsatfix ||
-                    settings_->publish_gpsfix || settings_->publish_pose ||
+                    settings_->publish_gpsfix || settings_->publish_pose || settings_->publish_pose_stamped ||
+                    settings_->publish_geopose_stamped || settings_->publish_geopose_covariance_stamped ||
                     settings_->publish_imu || settings_->publish_localization ||
-                    settings_->publish_tf || settings_->publish_twist ||
+                    settings_->publish_tf || settings_->publish_twist || settings_->publish_twist_stamped ||
                     settings_->publish_localization_ecef ||
                     settings_->publish_tf_ecef || settings_->publish_gpst)
                 {
@@ -959,7 +967,8 @@ namespace io {
             }
 
             if ((settings_->ins_vsm.ros_source == "odometry") ||
-                (settings_->ins_vsm.ros_source == "twist"))
+                (settings_->ins_vsm.ros_source == "twist") ||
+                (settings_->ins_vsm.ros_source == "twist_stamped"))
             {
                 if (settings_->ins_vsm.use_stream_device)
                 {

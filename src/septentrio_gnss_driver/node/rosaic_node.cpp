@@ -72,7 +72,7 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
 [[nodiscard]] bool rosaic_node::ROSaicNode::getROSParams()
 {
     param("covariance_threshold", settings_.covariance_threshold, 0.0f);
-    
+
     param("ntp_server", settings_.ntp_server, false);
     param("ptp_server_clock", settings_.ptp_server_clock, false);
     param("use_gnss_time", settings_.use_gnss_time, false);
@@ -174,7 +174,8 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
     param("publish.pose", settings_.publish_pose, false);
     param("publish.pose_stamped", settings_.publish_pose_stamped, false);
     param("publish.geopose_stamped", settings_.publish_geopose_stamped, false);
-    param("publish.geopose_covariance_stamped", settings_.publish_geopose_covariance_stamped, false);
+    param("publish.geopose_covariance_stamped",
+          settings_.publish_geopose_covariance_stamped, false);
     param("publish.diagnostics", settings_.publish_diagnostics, false);
     param("publish.aimplusstatus", settings_.publish_aimplusstatus, false);
     param("publish.galauthstatus", settings_.publish_galauthstatus, false);
@@ -393,7 +394,14 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
                 "Pitch angle output by topic /atteuler is a tilt angle rotated by " +
                     std::to_string(settings_.heading_offset) + ".");
         }
-        if (settings_.publish_pose && (settings_.septentrio_receiver_type == "gnss"))
+        if ((settings_.publish_pose &&
+             (settings_.septentrio_receiver_type == "gnss")) ||
+            (settings_.publish_pose_stamped &&
+             (settings_.septentrio_receiver_type == "gnss")) ||
+            (settings_.publish_geopose_stamped &&
+             (settings_.septentrio_receiver_type == "gnss")) ||
+            (settings_.publish_geopose_covariance_stamped &&
+             (settings_.septentrio_receiver_type == "gnss")))
         {
             this->log(
                 log_level::WARN,
@@ -573,7 +581,8 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
 
         bool ins_use_vsm = false;
         ins_use_vsm = ((settings_.ins_vsm.ros_source == "odometry") ||
-                       (settings_.ins_vsm.ros_source == "twist"));
+                       (settings_.ins_vsm.ros_source == "twist") ||
+                       (settings_.ins_vsm.ros_source == "twist_stamped"));
         if (!settings_.ins_vsm.ros_source.empty() && !ins_use_vsm)
             this->log(log_level::ERROR, "unknown ins_vsm.ros.source " +
                                             settings_.ins_vsm.ros_source +
@@ -717,7 +726,8 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
     {
         if (settings_.udp_ip_server.empty() || settings_.configure_rx ||
             (settings_.ins_vsm.ros_source == "odometry") ||
-            (settings_.ins_vsm.ros_source == "twist"))
+            (settings_.ins_vsm.ros_source == "twist") ||
+            (settings_.ins_vsm.ros_source == "twist_stamped"))
         {
             std::stringstream ss;
             ss << "Device is unsupported. Perhaps you meant 'tcp://host:port' or 'file_name:xxx.sbf' or 'serial:/path/to/device'?";
