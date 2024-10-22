@@ -1098,7 +1098,17 @@ namespace io {
             geopose_msg.pose.position.longitude = rad2deg(last_insnavgeod_.longitude);
             geopose_msg.pose.position.altitude = last_insnavgeod_.height;
             geopose_msg.pose.orientation = msg.pose.pose.orientation;
-            publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+            
+            if (!(std::isnan(geopose_msg.pose.position.latitude) ||
+                std::isnan(geopose_msg.pose.position.longitude) ||
+                std::isnan(geopose_msg.pose.position.altitude) ||
+                std::isnan(geopose_msg.pose.orientation.x) ||
+                std::isnan(geopose_msg.pose.orientation.y) ||
+                std::isnan(geopose_msg.pose.orientation.z) ||
+                std::isnan(geopose_msg.pose.orientation.w)))
+            {
+                publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+            }
         }
 
         if (settings_->publish_geopose_covariance_stamped)
@@ -1111,7 +1121,28 @@ namespace io {
             geopose_cov_msg.pose.pose.position.altitude = last_insnavgeod_.height;
             geopose_cov_msg.pose.pose.orientation = msg.pose.pose.orientation;
             geopose_cov_msg.pose.covariance = msg.pose.covariance;
-            publish<GeoPoseWithCovarianceStampedMsg>("geopose_cov", geopose_cov_msg);
+
+            bool has_nan = std::isnan(geopose_cov_msg.pose.pose.position.latitude) ||
+                        std::isnan(geopose_cov_msg.pose.pose.position.longitude) ||
+                        std::isnan(geopose_cov_msg.pose.pose.position.altitude) ||
+                        std::isnan(geopose_cov_msg.pose.pose.orientation.x) ||
+                        std::isnan(geopose_cov_msg.pose.pose.orientation.y) ||
+                        std::isnan(geopose_cov_msg.pose.pose.orientation.z) ||
+                        std::isnan(geopose_cov_msg.pose.pose.orientation.w);
+
+            for (const auto &cov : geopose_cov_msg.pose.covariance)
+            {
+                if (std::isnan(cov))
+                {
+                    has_nan = true;
+                    break;
+                }
+            }
+
+            if (!has_nan)
+            {
+                publish<GeoPoseWithCovarianceStampedMsg>("geopose_cov", geopose_cov_msg);
+            }
         }
         
         
