@@ -1121,7 +1121,14 @@ namespace io {
             twist_flu_msg.header = msg.header;
             twist_flu_msg.header.frame_id = settings_->frame_id;
             twist_flu_msg.twist = msg.twist.twist;
-            publish<TwistStampedMsg>("twist_flu", twist_flu_msg);
+
+            if (!(std::isnan(twist_flu_msg.twist.linear.x) ||
+                std::isnan(twist_flu_msg.twist.linear.y) ||
+                std::isnan(twist_flu_msg.twist.linear.z)))
+            {
+                publish<TwistStampedMsg>("twist_flu", twist_flu_msg);
+            }
+
         }   
 
         if (settings_->publish_localization)
