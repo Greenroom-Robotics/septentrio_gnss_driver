@@ -184,10 +184,15 @@ namespace log_level {
     enum LogLevel
     {
         DEBUG,
+        DEBUG_THROTTLE,
         INFO,
+        INFO_THROTTLE,
         WARN,
+        WARN_THROTTLE,
         ERROR,
-        FATAL
+        ERROR_THROTTLE,
+        FATAL,
+        FATAL_THROTTLE
     };
 } // namespace log_level
 
@@ -289,24 +294,39 @@ public:
      * @param[in] logLevel Log level
      * @param[in] s String to log
      */
-    void log(log_level::LogLevel logLevel, const std::string& s) const
+    void log(log_level::LogLevel logLevel, const std::string& s, std::chrono::milliseconds duration = std::chrono::milliseconds(0)) const
     {
         switch (logLevel)
         {
         case log_level::DEBUG:
             RCLCPP_DEBUG_STREAM(this->get_logger(), s);
             break;
+        case log_level::DEBUG_THROTTLE:
+            RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), duration.count(), "%s", s.c_str());
+            break;
         case log_level::INFO:
             RCLCPP_INFO_STREAM(this->get_logger(), s);
+            break;
+        case log_level::INFO_THROTTLE:
+            RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), duration.count(), "%s", s.c_str());
             break;
         case log_level::WARN:
             RCLCPP_WARN_STREAM(this->get_logger(), s);
             break;
+        case log_level::WARN_THROTTLE:
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), duration.count(), "%s", s.c_str());
+            break;
         case log_level::ERROR:
             RCLCPP_ERROR_STREAM(this->get_logger(), s);
             break;
+        case log_level::ERROR_THROTTLE:
+            RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), duration.count(), "%s", s.c_str());
+            break;
         case log_level::FATAL:
             RCLCPP_FATAL_STREAM(this->get_logger(), s);
+            break;
+        case log_level::FATAL_THROTTLE:
+            RCLCPP_FATAL_THROTTLE(this->get_logger(), *this->get_clock(), duration.count(), "%s", s.c_str());
             break;
         default:
             break;

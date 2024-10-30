@@ -295,12 +295,13 @@ namespace io {
                 while (node_->ok() && ec)
                 {
                     node_->log(
-                        log_level::ERROR,
+                        log_level::ERROR_THROTTLE,
                         "TCP connection to " +
                             endpointIterator->endpoint().address().to_string() +
                             " on port " +
                             std::to_string(endpointIterator->endpoint().port()) +
-                            " failed: " + ec.message() + ". Retrying ...");
+                            " failed: " + ec.message() + ". Retrying ...",
+                        std::chrono::milliseconds(5000));
                     using namespace std::chrono_literals;
                     std::this_thread::sleep_for(1s);
                     ec = connectInternal(endpointIterator);
