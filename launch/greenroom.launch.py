@@ -119,6 +119,7 @@ def generate_launch_description():
                 "serial": {"port": "", "baud_rate": 115200, "keep_open": True},
             },
             "activate_debug_log": False,
+            "block_nan_values": True,
         }
     ]
     

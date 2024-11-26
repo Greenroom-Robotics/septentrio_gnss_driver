@@ -65,6 +65,18 @@ namespace io {
         return std::isnan(val) ? 0.0 : deg2radSq(val);
     }
 
+    void replaceNaNGeoPoseStampedWithZero(geographic_msgs::msg::GeoPoseStamped& geopose)
+    {
+        if (std::isnan(geopose.pose.position.latitude)) geopose.pose.position.latitude = 0.0;
+        if (std::isnan(geopose.pose.position.longitude)) geopose.pose.position.longitude = 0.0;
+        if (std::isnan(geopose.pose.position.altitude)) geopose.pose.position.altitude = 0.0;
+
+        if (std::isnan(geopose.pose.orientation.x)) geopose.pose.orientation.x = 0.0;
+        if (std::isnan(geopose.pose.orientation.y)) geopose.pose.orientation.y = 0.0;
+        if (std::isnan(geopose.pose.orientation.z)) geopose.pose.orientation.z = 0.0;
+        if (std::isnan(geopose.pose.orientation.w)) geopose.pose.orientation.w = 0.0;
+    }
+
     void MessageHandler::assemblePoseWithCovarianceStamped()
     {
         if (!settings_->publish_pose)
@@ -1098,7 +1110,7 @@ namespace io {
             geopose_msg.pose.position.longitude = rad2deg(last_insnavgeod_.longitude);
             geopose_msg.pose.position.altitude = last_insnavgeod_.height;
             geopose_msg.pose.orientation = msg.pose.pose.orientation;
-            
+
             if (!(std::isnan(geopose_msg.pose.position.latitude) ||
                 std::isnan(geopose_msg.pose.position.longitude) ||
                 std::isnan(geopose_msg.pose.position.altitude) ||
@@ -1107,8 +1119,28 @@ namespace io {
                 std::isnan(geopose_msg.pose.orientation.z) ||
                 std::isnan(geopose_msg.pose.orientation.w)))
             {
-                publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+                if (settings_->block_nan_values)
+                {
+                    return;
+                }
+                else
+                {
+                    replaceNaNGeoPoseStampedWithZero(geopose_msg);
+                }
             }
+
+            publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+            
+            // if (!(std::isnan(geopose_msg.pose.position.latitude) ||
+            //     std::isnan(geopose_msg.pose.position.longitude) ||
+            //     std::isnan(geopose_msg.pose.position.altitude) ||
+            //     std::isnan(geopose_msg.pose.orientation.x) ||
+            //     std::isnan(geopose_msg.pose.orientation.y) ||
+            //     std::isnan(geopose_msg.pose.orientation.z) ||
+            //     std::isnan(geopose_msg.pose.orientation.w)))
+            // {
+            //     publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+            // }
         }
 
         if (settings_->publish_geopose_covariance_stamped)

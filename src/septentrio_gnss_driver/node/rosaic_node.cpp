@@ -164,6 +164,7 @@ rosaic_node::ROSaicNode::ROSaicNode(const rclcpp::NodeOptions& options) :
     param("multi_antenna", settings_.multi_antenna, false);
 
     // Publishing parameters
+    param("block_nan_values", settings_.block_nan_values, false);
     param("publish.auto_publish", settings_.auto_publish, false);
     param("publish.publish_only_valid", settings_.publish_only_valid, false);
     param("publish.gpst", settings_.publish_gpst, false);
