@@ -899,7 +899,12 @@ namespace io {
      */
     void MessageHandler::assembleLocalizationUtm()
     {
-        if (!settings_->publish_localization && !settings_->publish_tf)
+        if (!settings_->publish_localization && 
+            !settings_->publish_tf && 
+            !settings_->publish_twist && 
+            !settings_->publish_geopose_covariance_stamped &&
+            !settings_->publish_geopose_stamped
+        )
             return;
 
         LocalizationMsg msg;
@@ -1083,6 +1088,41 @@ namespace io {
         }
 
         assembleLocalizationMsgTwist(roll, pitch, yaw, msg);
+
+        if (settings_->publish_geopose_stamped)
+        {
+            GeoPoseStampedMsg geopose_msg;
+            geopose_msg.header.stamp = last_insnavgeod_.header.stamp;
+            geopose_msg.header.frame_id = settings_->frame_id;
+            geopose_msg.pose.position.latitude = rad2deg(last_insnavgeod_.latitude);
+            geopose_msg.pose.position.longitude = rad2deg(last_insnavgeod_.longitude);
+            geopose_msg.pose.position.altitude = last_insnavgeod_.height;
+            geopose_msg.pose.orientation = msg.pose.pose.orientation;
+            publish<GeoPoseStampedMsg>("geopose", geopose_msg);
+        }
+
+        if (settings_->publish_geopose_covariance_stamped)
+        {
+            GeoPoseWithCovarianceStampedMsg geopose_cov_msg;
+            geopose_cov_msg.header.stamp = last_insnavgeod_.header.stamp;
+            geopose_cov_msg.header.frame_id = settings_->frame_id;
+            geopose_cov_msg.pose.pose.position.latitude = rad2deg(last_insnavgeod_.latitude);
+            geopose_cov_msg.pose.pose.position.longitude = rad2deg(last_insnavgeod_.longitude);
+            geopose_cov_msg.pose.pose.position.altitude = last_insnavgeod_.height;
+            geopose_cov_msg.pose.pose.orientation = msg.pose.pose.orientation;
+            geopose_cov_msg.pose.covariance = msg.pose.covariance;
+            publish<GeoPoseWithCovarianceStampedMsg>("geopose_cov", geopose_cov_msg);
+        }
+        
+        
+        if (settings_->publish_twist_flu_stamped)
+        {
+            TwistStampedMsg twist_flu_msg;
+            twist_flu_msg.header = msg.header;
+            twist_flu_msg.header.frame_id = settings_->frame_id;
+            twist_flu_msg.twist = msg.twist.twist;
+            publish<TwistStampedMsg>("twist_flu", twist_flu_msg);
+        }   
 
         if (settings_->publish_localization)
             publish<LocalizationMsg>("localization", msg);

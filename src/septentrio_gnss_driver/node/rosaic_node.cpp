@@ -180,47 +180,48 @@ namespace rosaic_node {
         // multi_antenna param
         param("multi_antenna", settings_.multi_antenna, false);
 
-        // Publishing parameters
-        param("publish.auto_publish", settings_.auto_publish, false);
-        param("publish.publish_only_valid", settings_.publish_only_valid, false);
-        param("publish.gpst", settings_.publish_gpst, false);
-        param("publish.navsatfix", settings_.publish_navsatfix, true);
-        param("publish.gpsfix", settings_.publish_gpsfix, false);
-        param("publish.pose", settings_.publish_pose, false);
-        param("publish.diagnostics", settings_.publish_diagnostics, false);
-        param("publish.aimplusstatus", settings_.publish_aimplusstatus, false);
-        param("publish.galauthstatus", settings_.publish_galauthstatus, false);
-        param("publish.gpgga", settings_.publish_gpgga, false);
-        param("publish.gprmc", settings_.publish_gprmc, false);
-        param("publish.gpgsa", settings_.publish_gpgsa, false);
-        param("publish.gpgsv", settings_.publish_gpgsv, false);
-        param("publish.measepoch", settings_.publish_measepoch, false);
-        param("publish.pvtcartesian", settings_.publish_pvtcartesian, false);
-        param("publish.pvtgeodetic", settings_.publish_pvtgeodetic, false);
-        param("publish.basevectorcart", settings_.publish_basevectorcart, false);
-        param("publish.basevectorgeod", settings_.publish_basevectorgeod, false);
-        param("publish.poscovcartesian", settings_.publish_poscovcartesian, false);
-        param("publish.poscovgeodetic", settings_.publish_poscovgeodetic, false);
-        param("publish.velcovcartesian", settings_.publish_velcovcartesian, false);
-        param("publish.velcovgeodetic", settings_.publish_velcovgeodetic, false);
-        param("publish.atteuler", settings_.publish_atteuler, false);
-        param("publish.attcoveuler", settings_.publish_attcoveuler, false);
-        param("publish.insnavcart", settings_.publish_insnavcart, false);
-        param("publish.insnavgeod", settings_.publish_insnavgeod, false);
-        param("publish.imusetup", settings_.publish_imusetup, false);
-        param("publish.velsensorsetup", settings_.publish_velsensorsetup, false);
-        param("publish.exteventinsnavgeod", settings_.publish_exteventinsnavgeod,
-              false);
-        param("publish.exteventinsnavcart", settings_.publish_exteventinsnavcart,
-              false);
-        param("publish.extsensormeas", settings_.publish_extsensormeas, false);
-        param("publish.imu", settings_.publish_imu, false);
-        param("publish.localization", settings_.publish_localization, false);
-        param("publish.localization_ecef", settings_.publish_localization_ecef,
-              false);
-        param("publish.twist", settings_.publish_twist, false);
-        param("publish.tf", settings_.publish_tf, false);
-        param("publish.tf_ecef", settings_.publish_tf_ecef, false);
+    // Publishing parameters
+    param("publish.auto_publish", settings_.auto_publish, false);
+    param("publish.publish_only_valid", settings_.publish_only_valid, false);
+    param("publish.gpst", settings_.publish_gpst, false);
+    param("publish.navsatfix", settings_.publish_navsatfix, true);
+    param("publish.gpsfix", settings_.publish_gpsfix, false);
+    param("publish.pose", settings_.publish_pose, false);
+    param("publish.geopose_stamped", settings_.publish_geopose_stamped, false);
+    param("publish.geopose_covariance_stamped",
+          settings_.publish_geopose_covariance_stamped, false);
+    param("publish.diagnostics", settings_.publish_diagnostics, false);
+    param("publish.aimplusstatus", settings_.publish_aimplusstatus, false);
+    param("publish.galauthstatus", settings_.publish_galauthstatus, false);
+    param("publish.gpgga", settings_.publish_gpgga, false);
+    param("publish.gprmc", settings_.publish_gprmc, false);
+    param("publish.gpgsa", settings_.publish_gpgsa, false);
+    param("publish.gpgsv", settings_.publish_gpgsv, false);
+    param("publish.measepoch", settings_.publish_measepoch, false);
+    param("publish.pvtcartesian", settings_.publish_pvtcartesian, false);
+    param("publish.pvtgeodetic", settings_.publish_pvtgeodetic, false);
+    param("publish.basevectorcart", settings_.publish_basevectorcart, false);
+    param("publish.basevectorgeod", settings_.publish_basevectorgeod, false);
+    param("publish.poscovcartesian", settings_.publish_poscovcartesian, false);
+    param("publish.poscovgeodetic", settings_.publish_poscovgeodetic, false);
+    param("publish.velcovcartesian", settings_.publish_velcovcartesian, false);
+    param("publish.velcovgeodetic", settings_.publish_velcovgeodetic, false);
+    param("publish.atteuler", settings_.publish_atteuler, false);
+    param("publish.attcoveuler", settings_.publish_attcoveuler, false);
+    param("publish.insnavcart", settings_.publish_insnavcart, false);
+    param("publish.insnavgeod", settings_.publish_insnavgeod, false);
+    param("publish.imusetup", settings_.publish_imusetup, false);
+    param("publish.velsensorsetup", settings_.publish_velsensorsetup, false);
+    param("publish.exteventinsnavgeod", settings_.publish_exteventinsnavgeod, false);
+    param("publish.exteventinsnavcart", settings_.publish_exteventinsnavcart, false);
+    param("publish.extsensormeas", settings_.publish_extsensormeas, false);
+    param("publish.imu", settings_.publish_imu, false);
+    param("publish.localization", settings_.publish_localization, false);
+    param("publish.localization_ecef", settings_.publish_localization_ecef, false);
+    param("publish.twist", settings_.publish_twist, false);
+    param("publish.twist_flu_stamped", settings_.publish_twist_flu_stamped, false);
+    param("publish.tf", settings_.publish_tf, false);
+    param("publish.tf_ecef", settings_.publish_tf_ecef, false);
 
         if (settings_.publish_tf && settings_.publish_tf_ecef)
         {
