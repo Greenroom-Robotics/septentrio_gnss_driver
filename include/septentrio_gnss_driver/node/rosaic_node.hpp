@@ -127,7 +127,7 @@ namespace rosaic_node {
 
         void sendVelocity(const std::string& velNmea);
 
-        void diagnosticsCallback();
+        void diagnosticsStatusCallback(diagnostic_updater::DiagnosticStatusWrapper &status);
 
         //! Handles communication with the Rx
         io::CommunicationCore IO_;
@@ -138,7 +138,6 @@ namespace rosaic_node {
         std::thread setupThread_;
 
         rclcpp::TimerBase::SharedPtr diagnosticsTimer_;
-        rclcpp::Publisher<DiagnosticArrayMsg>::SharedPtr diagnostics_publisher_;
         bool connectedToINS_ = false;
     };
 } // namespace rosaic_node

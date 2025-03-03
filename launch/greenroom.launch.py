@@ -34,7 +34,7 @@ def generate_launch_description():
         {
             "covariance_threshold": 50.0,
             "device": "tcp://10.27.1.102:28784",
-            "configure_rx": True,
+            "configure_rx": False,
             # "custom_commands_file": "",
             # "login": {"user": "", "password": ""},
             # "osnma": {"mode": "off"},
@@ -128,7 +128,8 @@ def generate_launch_description():
         name='septentrio_gnss_driver',
         emulate_tty=True,
         sigterm_timeout = '20',
-        parameters=parameters_list
+        parameters=parameters_list,
+        ros_arguments=["--log-level", "info", "--log-level", "rcl:=warn"],
     )
 
     return launch.LaunchDescription([node, tf_imu, tf_gnss, tf_vsm, tf_aux1])

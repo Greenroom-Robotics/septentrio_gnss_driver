@@ -150,6 +150,9 @@ namespace io {
         //! Waits for capabilities
         void waitForCapabilities() { capabilitiesSemaphore_.wait(); }
 
+        // Add a public getter method for messageHandler_
+        MessageHandler& getMessageHandler() {return messageHandler_;}
+
     private:
         void handleSbf(const std::shared_ptr<Telegram>& telegram);
         void handleNmea(const std::shared_ptr<Telegram>& telegram);

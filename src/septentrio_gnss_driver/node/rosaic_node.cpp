@@ -66,35 +66,15 @@ namespace rosaic_node {
 
         setupThread_ = std::thread(std::bind(&ROSaicNode::setup, this));
 
-        // Create timer & publisher for diagnostics
-        diagnosticsTimer_ = this->create_wall_timer(
-            std::chrono::milliseconds(1000),
-            std::bind(&ROSaicNode::diagnosticsCallback, this));
-        diagnostics_publisher_ = this->create_publisher<DiagnosticArrayMsg>("/diagnostics", 10);
+        // Handle diagnostics
+        param("diagnostic_updater_rate", settings_.diagnostic_updater_rate, 1.0);
+        diagnostic_updater_ = std::make_shared<diagnostic_updater::Updater>(
+            this, static_cast<int>(settings_.diagnostic_updater_rate));
+        diagnostic_updater_->setHardwareID("Septentrio");
+        diagnostic_updater_->add("Status", this, &ROSaicNode::diagnosticsStatusCallback);
+        IO_.getTelegramHandler().getMessageHandler().add_message_handler_diagnostics();
 
         this->log(log_level::DEBUG, "Leaving ROSaicNode() constructor..");
-    }
-
-    void ROSaicNode::diagnosticsCallback() 
-    {
-        DiagnosticArrayMsg msg;
-        DiagnosticStatusMsg driverStatus;
-        driverStatus.name = "septentrio_driver: Driver status";
-        driverStatus.message =
-            "Current status of the Septentrio ROS driver";
-
-        if (connectedToINS_)
-        {
-            driverStatus.level = DiagnosticStatusMsg::OK;
-            driverStatus.message = "Driver is connected to the INS";
-        }
-        else
-        {
-            driverStatus.level = DiagnosticStatusMsg::ERROR;
-            driverStatus.message = "Driver is not connected to the INS";
-        }
-        msg.status.push_back(driverStatus);
-        diagnostics_publisher_->publish(msg);
     }
 
     ROSaicNode::~ROSaicNode()
@@ -109,6 +89,18 @@ namespace rosaic_node {
         // Initializes Connection
         IO_.connect();
         connectedToINS_ = true;
+    }
+
+    void ROSaicNode::diagnosticsStatusCallback(diagnostic_updater::DiagnosticStatusWrapper &status) 
+    {
+        if (connectedToINS_)
+        {
+            status.summary(status.OK, "Driver is connected to the INS");
+        }
+        else
+        {
+            status.summary(status.ERROR, "Driver is not connected to the INS");
+        }
     }
 
     [[nodiscard]] bool ROSaicNode::getROSParams()

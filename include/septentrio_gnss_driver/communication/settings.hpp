@@ -377,6 +377,8 @@ struct Settings
     bool read_from_pcap = false;
     //! INS VSM setting
     InsVsm ins_vsm;
+    //! Rate to publish diagnostics
+    double diagnostic_updater_rate;
 };
 
 //! Capabilities struct

@@ -37,6 +37,9 @@
 #include <unordered_map>
 // ROS includes
 #include <rclcpp/rclcpp.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
+#include <diagnostic_updater/update_functions.hpp>
 // tf2 includes
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
@@ -474,6 +477,9 @@ public:
      * @brief Check if Rx has improved VSM handling
      */
     bool hasImprovedVsmHandling() { return capabilities_.has_improved_vsm_handling; }
+
+    // Diagnostic updater
+    std::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
 
 private:
     void callbackOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr odo)
