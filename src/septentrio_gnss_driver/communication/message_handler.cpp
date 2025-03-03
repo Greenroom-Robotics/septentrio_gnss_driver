@@ -244,7 +244,7 @@ namespace io {
                 if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
                      8) == static_cast<uint16_t>(0))
                 {
-                    gnss_status.summary(DiagnosticStatusMsg::STALE,
+                    gnss_status.summary(DiagnosticStatusMsg::ERROR,
                                         "GNSS quality indicators are stale");
                 } else if (((last_qualityind_.indicators[i] &
                              indicators_value_mask) >>
@@ -263,12 +263,7 @@ namespace io {
                 break;
             }
         }
-        // If the ReceiverStatus's RxError field is not 0, then at least one error
-        // has been detected.
-        if (last_receiverstatus_.rx_error != static_cast<uint32_t>(0))
-        {
-            gnss_status.summary(DiagnosticStatusMsg::WARN, "Receiver has reported an issue");
-        }
+
         // Creating an array of values associated with the GNSS status
         for (uint16_t i = static_cast<uint16_t>(0);
              i != static_cast<uint16_t>(last_qualityind_.n); ++i)
