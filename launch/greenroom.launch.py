@@ -129,6 +129,12 @@ def generate_launch_description():
         emulate_tty=True,
         sigterm_timeout = '20',
         parameters=parameters_list,
+        namespace='vessel_1',
+        remappings=[
+            ("/diagnostics", "gama/diagnostics"),
+            ("geopose", "geopose"),
+            ("twist_flu", "twist"),
+        ],
         ros_arguments=["--log-level", "info", "--log-level", "rcl:=warn"],
     )
 

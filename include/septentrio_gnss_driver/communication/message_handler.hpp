@@ -152,16 +152,16 @@ namespace io {
 
         void add_message_handler_diagnostics()
         {
-            node_->diagnostic_updater_->add("gnss_diagnostics", this,
+            node_->diagnostic_updater_->add("GNSS", this,
                                      &MessageHandler::assembleGNSSDiagnosticArray);
-            node_->diagnostic_updater_->add("receiver_diagnostics", this,
+            node_->diagnostic_updater_->add("Receiver", this,
                                      &MessageHandler::assembleReceiverDiagnosticArray);
             if (settings_->publish_galauthstatus) {
-                node_->diagnostic_updater_->add("osnma_diagnostics", this,
+                node_->diagnostic_updater_->add("OSNMA", this,
                                         &MessageHandler::assembleOsnmaDiagnosticArray);
             }
             if (settings_->publish_aimplusstatus) {
-                node_->diagnostic_updater_->add("aim_and_diagnostics", this,
+                node_->diagnostic_updater_->add("Aim", this,
                                         &MessageHandler::assembleAimAndDiagnosticArray);
             }
         }
