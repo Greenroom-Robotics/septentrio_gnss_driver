@@ -137,7 +137,6 @@ namespace rosaic_node {
 
         std::thread setupThread_;
 
-        rclcpp::TimerBase::SharedPtr diagnosticsTimer_;
         bool connectedToINS_ = false;
     };
 } // namespace rosaic_node

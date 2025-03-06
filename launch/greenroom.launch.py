@@ -125,7 +125,7 @@ def generate_launch_description():
     node = Node(
         package='septentrio_gnss_driver',
         executable='septentrio_gnss_driver_node',
-        name='septentrio_gnss_driver',
+        name='septentrio_ins',
         emulate_tty=True,
         sigterm_timeout = '20',
         parameters=parameters_list,
