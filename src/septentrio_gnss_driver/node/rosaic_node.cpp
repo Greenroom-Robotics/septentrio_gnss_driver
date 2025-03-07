@@ -93,7 +93,9 @@ namespace rosaic_node {
 
     void ROSaicNode::diagnosticsStatusCallback(diagnostic_updater::DiagnosticStatusWrapper &status) 
     {
-        if (connectedToINS_)
+        rclcpp::Time now = this->get_clock()->now();
+        rclcpp::Duration durationSinceLastTelegram = now - IO_.timeSinceLastTelegram_;
+        if (connectedToINS_ && (durationSinceLastTelegram < rclcpp::Duration::from_seconds(settings_.disconnect_timeout)))
         {
             status.summary(status.OK, "Driver is connected to the INS");
         }
@@ -105,6 +107,7 @@ namespace rosaic_node {
 
     [[nodiscard]] bool ROSaicNode::getROSParams()
     {
+        param("disconnect_timeout", settings_.disconnect_timeout, 2.0);
         param("ntp_server", settings_.ntp_server, false);
         param("ptp_server_clock", settings_.ptp_server_clock, false);
         param("use_gnss_time", settings_.use_gnss_time, false);

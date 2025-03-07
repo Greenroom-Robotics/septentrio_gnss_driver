@@ -223,8 +223,11 @@ namespace io {
         DiagnosticArrayMsg msg;
         if (!validValue(last_receiverstatus_.block_header.tow) ||
             (last_receiverstatus_.block_header.tow !=
-             last_qualityind_.block_header.tow))
+             last_qualityind_.block_header.tow)) {
+            gnss_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "No receiver data available");
             return;
+        }
         std::string serialnumber;
         if (validValue(last_receiversetup_.block_header.tow))
             serialnumber = last_receiversetup_.rx_serial_number;
@@ -336,13 +339,14 @@ namespace io {
     void MessageHandler::assembleReceiverDiagnosticArray(
         diagnostic_updater::DiagnosticStatusWrapper &receiver_status)
     {
-        receiver_status.add("ExtError", std::to_string(last_receiverstatus_.ext_error));
-        receiver_status.add("RxError", std::to_string(last_receiverstatus_.rx_error));
-        receiver_status.add("RxStatus", std::to_string(last_receiverstatus_.rx_status));
-        receiver_status.add("Uptime in s", std::to_string(last_receiverstatus_.up_time));
-        receiver_status.add("CPU load in %", std::to_string(last_receiverstatus_.cpu_load));
-
-        if ((last_receiverstatus_.rx_error & (1 << 9)))
+        if (!validValue(last_receiverstatus_.block_header.tow) ||
+            (last_receiverstatus_.block_header.tow !=
+             last_qualityind_.block_header.tow)) {
+            receiver_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "No receiver data available");
+            return;
+        }
+        else if ((last_receiverstatus_.rx_error & (1 << 9)))
         {
             receiver_status.summary(DiagnosticStatusMsg::ERROR, "Receiver has reported an error");
         }
@@ -354,6 +358,12 @@ namespace io {
         {
             receiver_status.summary(DiagnosticStatusMsg::OK, "Receiver status is nominal");
         }
+
+        receiver_status.add("ExtError", std::to_string(last_receiverstatus_.ext_error));
+        receiver_status.add("RxError", std::to_string(last_receiverstatus_.rx_error));
+        receiver_status.add("RxStatus", std::to_string(last_receiverstatus_.rx_status));
+        receiver_status.add("Uptime in s", std::to_string(last_receiverstatus_.up_time));
+        receiver_status.add("CPU load in %", std::to_string(last_receiverstatus_.cpu_load));
     }
 
     void MessageHandler::assembleOsnmaDiagnosticArray(

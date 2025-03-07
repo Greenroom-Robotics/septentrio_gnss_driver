@@ -1023,6 +1023,7 @@ namespace io {
     {
         while (running_)
         {
+            timeSinceLastTelegram_ = node_->get_clock()->now();
             std::shared_ptr<Telegram> telegram;
             telegramQueue_.pop(telegram);
 

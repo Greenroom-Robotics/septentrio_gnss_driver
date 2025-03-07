@@ -131,6 +131,11 @@ namespace io {
          */
         TelegramHandler& getTelegramHandler() { return telegramHandler_; }
 
+        /**
+         * @brief time since last telegram
+         */
+        rclcpp::Time timeSinceLastTelegram_;
+
     private:
         /**
          * @brief Resets Rx settings

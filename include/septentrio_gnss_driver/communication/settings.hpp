@@ -150,6 +150,8 @@ struct Settings
 {
     //! Set logger level to DEBUG
     bool activate_debug_log;
+    //! Timeout before disconnection is declared
+    double disconnect_timeout;
     //! Device
     std::string device;
     //! Device type
