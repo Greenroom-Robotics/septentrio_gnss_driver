@@ -150,6 +150,8 @@ struct Settings
 {
     //! Set logger level to DEBUG
     bool activate_debug_log;
+    //! Timeout before disconnection is declared
+    double disconnect_timeout;
     //! Device
     std::string device;
     //! Device type
@@ -377,6 +379,8 @@ struct Settings
     bool read_from_pcap = false;
     //! INS VSM setting
     InsVsm ins_vsm;
+    //! Rate to publish diagnostics
+    double diagnostic_updater_rate;
 };
 
 //! Capabilities struct

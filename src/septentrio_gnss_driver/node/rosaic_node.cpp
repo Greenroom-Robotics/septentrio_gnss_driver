@@ -66,6 +66,14 @@ namespace rosaic_node {
 
         setupThread_ = std::thread(std::bind(&ROSaicNode::setup, this));
 
+        // Handle diagnostics
+        param("diagnostic_updater_rate", settings_.diagnostic_updater_rate, 1.0);
+        diagnostic_updater_ = std::make_shared<diagnostic_updater::Updater>(
+            this, static_cast<int>(settings_.diagnostic_updater_rate));
+        diagnostic_updater_->setHardwareID("Septentrio");
+        diagnostic_updater_->add("Status", this, &ROSaicNode::diagnosticsStatusCallback);
+        IO_.getTelegramHandler().getMessageHandler().add_message_handler_diagnostics();
+
         this->log(log_level::DEBUG, "Leaving ROSaicNode() constructor..");
     }
 
@@ -80,10 +88,26 @@ namespace rosaic_node {
     {
         // Initializes Connection
         IO_.connect();
+        connectedToINS_ = true;
+    }
+
+    void ROSaicNode::diagnosticsStatusCallback(diagnostic_updater::DiagnosticStatusWrapper &status) 
+    {
+        rclcpp::Time now = this->get_clock()->now();
+        rclcpp::Duration durationSinceLastTelegram = now - IO_.timeSinceLastTelegram_;
+        if (connectedToINS_ && (durationSinceLastTelegram < rclcpp::Duration::from_seconds(settings_.disconnect_timeout)))
+        {
+            status.summary(status.OK, "Driver is connected to the INS");
+        }
+        else
+        {
+            status.summary(status.ERROR, "Driver is not connected to the INS");
+        }
     }
 
     [[nodiscard]] bool ROSaicNode::getROSParams()
     {
+        param("disconnect_timeout", settings_.disconnect_timeout, 2.0);
         param("ntp_server", settings_.ntp_server, false);
         param("ptp_server_clock", settings_.ptp_server_clock, false);
         param("use_gnss_time", settings_.use_gnss_time, false);

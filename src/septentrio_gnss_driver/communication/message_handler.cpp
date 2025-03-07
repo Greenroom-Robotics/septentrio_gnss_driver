@@ -211,8 +211,8 @@ namespace io {
         publish<PoseWithCovarianceStampedMsg>("pose", msg);
     };
 
-    void MessageHandler::assembleDiagnosticArray(
-        const std::shared_ptr<Telegram>& telegram)
+    void MessageHandler::assembleGNSSDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &gnss_status)
     {
         if (last_receiverstatus_.rx_error & (1 << 9))
             node_->log(log_level::DEBUG, " RX has reported CPU overload!");
@@ -223,14 +223,16 @@ namespace io {
         DiagnosticArrayMsg msg;
         if (!validValue(last_receiverstatus_.block_header.tow) ||
             (last_receiverstatus_.block_header.tow !=
-             last_qualityind_.block_header.tow))
+             last_qualityind_.block_header.tow)) {
+            gnss_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "No receiver data available");
             return;
+        }
         std::string serialnumber;
         if (validValue(last_receiversetup_.block_header.tow))
             serialnumber = last_receiversetup_.rx_serial_number;
         else
             serialnumber = "unknown";
-        DiagnosticStatusMsg gnss_status;
         // Constructing the "level of operation" field
         uint16_t indicators_type_mask = static_cast<uint16_t>(255);
         uint16_t indicators_value_mask = static_cast<uint16_t>(3840);
@@ -245,7 +247,8 @@ namespace io {
                 if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
                      8) == static_cast<uint16_t>(0))
                 {
-                    gnss_status.level = DiagnosticStatusMsg::STALE;
+                    gnss_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "GNSS quality indicators are stale");
                 } else if (((last_qualityind_.indicators[i] &
                              indicators_value_mask) >>
                             8) == static_cast<uint16_t>(1) ||
@@ -253,22 +256,18 @@ namespace io {
                              indicators_value_mask) >>
                             8) == static_cast<uint16_t>(2))
                 {
-                    gnss_status.level = DiagnosticStatusMsg::WARN;
+                    gnss_status.summary(DiagnosticStatusMsg::WARN,
+                                        "GNSS quality indicators are below nominal");
                 } else
                 {
-                    gnss_status.level = DiagnosticStatusMsg::OK;
+                    gnss_status.summary(DiagnosticStatusMsg::OK,
+                                        "GNSS quality indicators are nominal");
                 }
                 break;
             }
         }
-        // If the ReceiverStatus's RxError field is not 0, then at least one error
-        // has been detected.
-        if (last_receiverstatus_.rx_error != static_cast<uint32_t>(0))
-        {
-            gnss_status.level = DiagnosticStatusMsg::ERROR;
-        }
+
         // Creating an array of values associated with the GNSS status
-        gnss_status.values.resize(static_cast<uint16_t>(last_qualityind_.n - 1));
         for (uint16_t i = static_cast<uint16_t>(0);
              i != static_cast<uint16_t>(last_qualityind_.n); ++i)
         {
@@ -279,210 +278,174 @@ namespace io {
             if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                 static_cast<uint16_t>(1))
             {
-                gnss_status.values[i].key = "GNSS Signals, Main Antenna";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("GNSS Signals, Main Antenna",
+                                std::to_string((last_qualityind_.indicators[i] &
+                                                indicators_value_mask) >>
+                                               8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(2))
             {
-                gnss_status.values[i].key = "GNSS Signals, Aux1 Antenna";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("GNSS Signals, Aux1 Antenna",
+                                std::to_string((last_qualityind_.indicators[i] &
+                                                indicators_value_mask) >>
+                                               8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(11))
             {
-                gnss_status.values[i].key = "RF Power, Main Antenna";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("RF Power, Main Antenna",
+                                std::to_string((last_qualityind_.indicators[i] &
+                                                indicators_value_mask) >>
+                                               8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(12))
             {
-                gnss_status.values[i].key = "RF Power, Aux1 Antenna";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("RF Power, Aux1 Antenna",
+                                std::to_string((last_qualityind_.indicators[i] &
+                                                indicators_value_mask) >>
+                                               8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(21))
             {
-                gnss_status.values[i].key = "CPU Headroom";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("CPU Headroom",
+                            std::to_string((last_qualityind_.indicators[i] &
+                                            indicators_value_mask) >>
+                                            8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(25))
             {
-                gnss_status.values[i].key = "OCXO Stability";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("OCXO Stability",
+                            std::to_string((last_qualityind_.indicators[i] &
+                                            indicators_value_mask) >>
+                                            8));
             } else if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(30))
             {
-                gnss_status.values[i].key = "Base Station Measurements";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("Base Station Measurements",
+                            std::to_string((last_qualityind_.indicators[i] &
+                                            indicators_value_mask) >>
+                                            8));
             } else
             {
                 assert((last_qualityind_.indicators[i] & indicators_type_mask) ==
                        static_cast<uint16_t>(31));
-                gnss_status.values[i].key = "RTK Post-Processing";
-                gnss_status.values[i].value = std::to_string(
-                    (last_qualityind_.indicators[i] & indicators_value_mask) >> 8);
+                gnss_status.add("RTK Post-Processing",
+                            std::to_string((last_qualityind_.indicators[i] &
+                                            indicators_value_mask) >>
+                                            8));
             }
         }
-        gnss_status.hardware_id = serialnumber;
-        gnss_status.name = "septentrio_driver: Quality indicators";
-        gnss_status.message =
-            "GNSS quality Indicators (from 0 for low quality to 10 for high quality, 15 if unknown)";
-        msg.status.push_back(gnss_status);
-        DiagnosticStatusMsg receiver_status;
-        receiver_status.hardware_id = serialnumber;
-        receiver_status.name = "septentrio_driver: receiver status";
-        receiver_status.message = "Receiver status";
-        receiver_status.values.resize(5);
-        receiver_status.values[0].key = "ExtError";
-        receiver_status.values[0].value =
-            std::to_string(last_receiverstatus_.ext_error);
-        receiver_status.values[1].key = "RxError";
-        receiver_status.values[1].value =
-            std::to_string(last_receiverstatus_.rx_error);
-        receiver_status.values[2].key = "RxStatus";
-        receiver_status.values[2].value =
-            std::to_string(last_receiverstatus_.rx_status);
-        receiver_status.values[3].key = "Uptime in s";
-        receiver_status.values[3].value =
-            std::to_string(last_receiverstatus_.up_time);
-        receiver_status.values[4].key = "CPU load in %";
-        receiver_status.values[4].value =
-            std::to_string(last_receiverstatus_.cpu_load);
-        if ((last_receiverstatus_.rx_error & (1 << 9)))
-            receiver_status.level = DiagnosticStatusMsg::ERROR;
-        else if ((last_receiverstatus_.rx_status & (1 << 8)))
-            receiver_status.level = DiagnosticStatusMsg::WARN;
-        else
-            receiver_status.level = DiagnosticStatusMsg::OK;
-        msg.status.push_back(receiver_status);
-        std::string frame_id;
-        if (settings_->septentrio_receiver_type == "gnss")
-        {
-            frame_id = settings_->frame_id;
-        }
-        if (settings_->septentrio_receiver_type == "ins")
-        {
-            if (settings_->ins_use_poi)
-            {
-                frame_id = settings_->poi_frame_id;
-            } else
-            {
-                frame_id = settings_->frame_id;
-            }
-        }
-        assembleHeader(frame_id, telegram, msg);
-        publish<DiagnosticArrayMsg>("/diagnostics", msg);
     };
 
-    void MessageHandler::assembleOsnmaDiagnosticArray()
+    void MessageHandler::assembleReceiverDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &receiver_status)
     {
-        DiagnosticArrayMsg msg;
-        DiagnosticStatusMsg diagOsnma;
+        if (!validValue(last_receiverstatus_.block_header.tow) ||
+            (last_receiverstatus_.block_header.tow !=
+             last_qualityind_.block_header.tow)) {
+            receiver_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "No receiver data available");
+            return;
+        }
+        else if ((last_receiverstatus_.rx_error & (1 << 9)))
+        {
+            receiver_status.summary(DiagnosticStatusMsg::ERROR, "Receiver has reported an error");
+        }
+        else if ((last_receiverstatus_.rx_status & (1 << 8)))
+        {
+            receiver_status.summary(DiagnosticStatusMsg::WARN, "Receiver status is below nominal");
+        }
+        else
+        {
+            receiver_status.summary(DiagnosticStatusMsg::OK, "Receiver status is nominal");
+        }
 
-        diagOsnma.hardware_id = last_receiversetup_.rx_serial_number;
-        diagOsnma.name = "septentrio_driver: OSNMA";
-        diagOsnma.message = "Current status of the OSNMA authentication";
+        receiver_status.add("ExtError", std::to_string(last_receiverstatus_.ext_error));
+        receiver_status.add("RxError", std::to_string(last_receiverstatus_.rx_error));
+        receiver_status.add("RxStatus", std::to_string(last_receiverstatus_.rx_status));
+        receiver_status.add("Uptime in s", std::to_string(last_receiverstatus_.up_time));
+        receiver_status.add("CPU load in %", std::to_string(last_receiverstatus_.cpu_load));
+    }
 
-        diagOsnma.values.resize(6);
-        diagOsnma.values[0].key = "status";
+    void MessageHandler::assembleOsnmaDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &osnma_status)
+    {
+        std::string osnma_string;
         switch (last_gal_auth_status_.osnma_status & 7)
         {
         case 0:
         {
-            diagOsnma.values[0].value = "Disabled";
+            osnma_string = "Disabled";
             break;
         }
         case 1:
         {
             uint16_t percent = (last_gal_auth_status_.osnma_status >> 3) & 127;
-            diagOsnma.values[0].value =
-                "Initializing " + std::to_string(percent) + " %";
+            osnma_string = "Initializing " + std::to_string(percent) + " %";
             break;
         }
         case 2:
         {
-            diagOsnma.values[0].value = "Waiting on NTP";
+            osnma_string = "Waiting on NTP";
             break;
         }
         case 3:
         {
-            diagOsnma.values[0].value = "Init failed - inconsistent time";
+            osnma_string = "Init failed - inconsistent time";
             break;
         }
         case 4:
         {
-            diagOsnma.values[0].value = "Init failed - KROOT signature invalid";
+            osnma_string = "Init failed - KROOT signature invalid";
             break;
         }
         case 5:
         {
-            diagOsnma.values[0].value = "Init failed - invalid param received";
+            osnma_string = "Init failed - invalid param received";
             break;
         }
         case 6:
         {
-            diagOsnma.values[0].value = "Authenticating";
+            osnma_string = "Authenticating";
             break;
         }
-
         default:
             break;
         }
+        osnma_status.add("status", osnma_string);
 
-        diagOsnma.values[1].key = "trusted_time_delta";
         if (validValue(last_gal_auth_status_.trusted_time_delta))
-            diagOsnma.values[1].value =
-                std::to_string(last_gal_auth_status_.trusted_time_delta);
+            osnma_string = std::to_string(last_gal_auth_status_.trusted_time_delta);
         else
-            diagOsnma.values[1].value = "N/A";
+            osnma_string = "N/A";
+        osnma_status.add("trusted_time_delta", osnma_string);
 
         std::bitset<64> gal_active = last_gal_auth_status_.gal_active_mask;
         std::bitset<64> gal_auth = last_gal_auth_status_.gal_authentic_mask;
         uint8_t gal_authentic = (gal_auth & gal_active).count();
         uint8_t gal_spoofed = (~gal_auth & gal_active).count();
-        diagOsnma.values[2].key = "Galileo authentic";
-        diagOsnma.values[2].value = std::to_string(gal_authentic);
-        diagOsnma.values[3].key = "Galileo spoofed";
-        diagOsnma.values[3].value = std::to_string(gal_spoofed);
+        osnma_status.add("Galileo authentic", std::to_string(gal_authentic));
+        osnma_status.add("Galileo spoofed", std::to_string(gal_spoofed));
 
         std::bitset<64> gps_active = last_gal_auth_status_.gps_active_mask;
         std::bitset<64> gps_auth = last_gal_auth_status_.gps_authentic_mask;
         uint8_t gps_authentic = (gps_auth & gps_active).count();
         uint8_t gps_spoofed = (~gps_auth & gps_active).count();
-        diagOsnma.values[4].key = "GPS authentic";
-        diagOsnma.values[4].value = std::to_string(gps_authentic);
-        diagOsnma.values[5].key = "GPS spoofed";
-        diagOsnma.values[5].value = std::to_string(gps_spoofed);
+        osnma_status.add("GPS spoofed", std::to_string(gps_spoofed));
+        osnma_status.add("GPS authentic", std::to_string(gps_authentic));
 
         if ((gal_spoofed + gps_spoofed) == 0)
-            diagOsnma.level = DiagnosticStatusMsg::OK;
+            osnma_status.summary(DiagnosticStatusMsg::OK, "OSNMA is nominal");
         else if ((gal_authentic + gps_authentic) > 0)
-            diagOsnma.level = DiagnosticStatusMsg::WARN;
+            osnma_status.summary(DiagnosticStatusMsg::WARN, "OSNMA is below nominal");
         else
-            diagOsnma.level = DiagnosticStatusMsg::ERROR;
-
-        msg.status.push_back(diagOsnma);
-        msg.header = last_gal_auth_status_.header;
-
-        publish<DiagnosticArrayMsg>("/diagnostics", msg);
+            osnma_status.summary(DiagnosticStatusMsg::ERROR, "OSNMA is below nominal");
     }
 
-    void MessageHandler::assembleAimAndDiagnosticArray()
+    void MessageHandler::assembleAimAndDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &aim_status)
     {
         AimPlusStatusMsg aimMsg;
-        DiagnosticArrayMsg msg;
-        DiagnosticStatusMsg diagRf;
-        diagRf.hardware_id = last_receiversetup_.rx_serial_number;
-        diagRf.name = "septentrio_driver: AIM+ status";
-        diagRf.message =
-            "Current status of the AIM+ interference and spoofing mitigation";
-
-        diagRf.values.resize(2);
-        diagRf.values[0].key = "interference";
+        std::string aim_string;
         bool mitigated = false;
         bool detected = false;
         for (auto rfband : last_rf_status_.rfband)
@@ -498,43 +461,46 @@ namespace io {
         }
         if (detected)
         {
-            diagRf.values[0].value = "present";
+            aim_string = "present";
             aimMsg.interference = AimPlusStatusMsg::INTERFERENCE_PRESENT;
         } else if (mitigated)
         {
-            diagRf.values[0].value = "mitigated";
+            aim_string = "mitigated";
             aimMsg.interference = AimPlusStatusMsg::INTERFERENCE_MITIGATED;
         } else
         {
-            diagRf.values[0].value = "spectrum clean";
+            aim_string = "spectrum clean";
             aimMsg.interference = AimPlusStatusMsg::SPECTRUM_CLEAN;
         }
+        aim_status.add("interference", aim_string);
 
-        diagRf.values[1].key = "spoofing";
+        aim_status.values[1].key = "spoofing";
         bool spoofed = false;
         std::bitset<8> flags = last_rf_status_.flags;
         if (flags.test(0) && flags.test(1))
         {
-            diagRf.values[1].value = "detected by OSNMA and authenticity test";
+            aim_string = "detected by OSNMA and authenticity test";
             aimMsg.spoofing =
                 AimPlusStatusMsg::SPOOFING_DETECTED_BY_OSNMA_AND_AUTHENTCITY_TEST;
             spoofed = true;
         } else if (flags.test(0))
         {
-            diagRf.values[1].value = "detected by authenticity test";
+            aim_string = "detected by authenticity test";
             aimMsg.spoofing =
                 AimPlusStatusMsg::SPOOFING_DETECTED_BY_AUTHENTCITY_TEST;
             spoofed = true;
         } else if (flags.test(1))
         {
-            diagRf.values[1].value = "detected by OSNMA";
+            aim_string = "detected by OSNMA";
             aimMsg.spoofing = AimPlusStatusMsg::SPOOFING_DETECTED_BY_OSNMA;
             spoofed = true;
         } else
         {
-            diagRf.values[1].value = "none detected";
+            aim_string = "none detected";
             aimMsg.spoofing = AimPlusStatusMsg::NONE_DETECTED;
         }
+        aim_status.add("spoofing", aim_string);
+
         if (osnma_info_available_)
         {
             aimMsg.osnma_authenticating =
@@ -561,16 +527,11 @@ namespace io {
         publish<AimPlusStatusMsg>("aimplusstatus", aimMsg);
 
         if (spoofed || detected)
-            diagRf.level = DiagnosticStatusMsg::ERROR;
+            aim_status.summary(DiagnosticStatusMsg::ERROR, "AIM+ is below nominal");
         else if (mitigated)
-            diagRf.level = DiagnosticStatusMsg::WARN;
+            aim_status.summary(DiagnosticStatusMsg::WARN, "AIM+ is below nominal");
         else
-            diagRf.level = DiagnosticStatusMsg::OK;
-
-        msg.status.push_back(diagRf);
-        msg.header = last_rf_status_.header;
-
-        publish<DiagnosticArrayMsg>("/diagnostics", msg);
+            aim_status.summary(DiagnosticStatusMsg::OK, "AIM+ is nominal");
     }
 
     void MessageHandler::assembleImu()
@@ -2423,7 +2384,6 @@ namespace io {
             if (settings_->publish_galauthstatus)
             {
                 publish<GalAuthStatusMsg>("galauthstatus", last_gal_auth_status_);
-                assembleOsnmaDiagnosticArray();
             }
             break;
         }
@@ -2439,7 +2399,6 @@ namespace io {
             if (settings_->publish_aimplusstatus)
             {
                 publish<RfStatusMsg>("rfstatus", last_rf_status_);
-                assembleAimAndDiagnosticArray();
             }
             break;
         }
@@ -2689,7 +2648,6 @@ namespace io {
                 node_->log(log_level::ERROR, "parse error in ReceiverStatus");
                 break;
             }
-            assembleDiagnosticArray(telegram);
             break;
         }
         case QUALITY_IND:
@@ -2700,7 +2658,6 @@ namespace io {
                 node_->log(log_level::ERROR, "parse error in QualityInd");
                 break;
             }
-            assembleDiagnosticArray(telegram);
             break;
         }
         case RECEIVER_SETUP:

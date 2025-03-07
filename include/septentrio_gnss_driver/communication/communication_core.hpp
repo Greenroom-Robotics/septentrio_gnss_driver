@@ -126,6 +126,16 @@ namespace io {
          */
         void sendVelocity(const std::string& velNmea);
 
+        /**
+         * @brief get telegramHandler_
+         */
+        TelegramHandler& getTelegramHandler() { return telegramHandler_; }
+
+        /**
+         * @brief time since last telegram
+         */
+        rclcpp::Time timeSinceLastTelegram_;
+
     private:
         /**
          * @brief Resets Rx settings

@@ -148,8 +148,22 @@ namespace io {
          * @param[in] node Pointer to the node)
          */
         MessageHandler(ROSaicNodeBase* node) :
-            node_(node), settings_(node->settings()), unix_time_(0)
+            node_(node), settings_(node->settings()), unix_time_(0) {};
+
+        void add_message_handler_diagnostics()
         {
+            node_->diagnostic_updater_->add("GNSS", this,
+                                     &MessageHandler::assembleGNSSDiagnosticArray);
+            node_->diagnostic_updater_->add("Receiver", this,
+                                     &MessageHandler::assembleReceiverDiagnosticArray);
+            if (settings_->publish_galauthstatus) {
+                node_->diagnostic_updater_->add("OSNMA", this,
+                                        &MessageHandler::assembleOsnmaDiagnosticArray);
+            }
+            if (settings_->publish_aimplusstatus) {
+                node_->diagnostic_updater_->add("Aim", this,
+                                        &MessageHandler::assembleAimAndDiagnosticArray);
+            }
         }
 
         void setLeapSeconds()
@@ -349,22 +363,27 @@ namespace io {
 
         /**
          * @brief "Callback" function when constructing
-         * DiagnosticArrayMsg messages
-         * @param[in] telegram telegram from which the msg was assembled
+         * GNSSDiagnosticArrayMsg messages
          */
-        void assembleDiagnosticArray(const std::shared_ptr<Telegram>& telegram);
+        void assembleGNSSDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &gnss_status); 
+
+        /**
+         * @brief "Callback" function when constructing
+         * ReceiverDiagnosticArrayMsg messages
+         */
+        void assembleReceiverDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &receiver_status); 
 
         /**
          * @brief "Callback" function when constructing
          * OSNMA DiagnosticArrayMsg messages
          */
-        void assembleOsnmaDiagnosticArray();
+        void assembleOsnmaDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &osnma_status);
 
         /**
          * @brief "Callback" function when constructing
          * RFStatus DiagnosticArrayMsg messages
          */
-        void assembleAimAndDiagnosticArray();
+        void assembleAimAndDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &aim_status);
 
         /**
          * @brief "Callback" function when constructing
