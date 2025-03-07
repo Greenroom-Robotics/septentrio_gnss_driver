@@ -40,6 +40,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/publisher.hpp>
 #include <diagnostic_updater/update_functions.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 // tf2 includes
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
@@ -280,10 +281,14 @@ public:
     {
         if (this->has_parameter(name))
             this->undeclare_parameter(name);
+        
+        // Create a parameter descriptor to indicate params requiring restart
+        rcl_interfaces::msg::ParameterDescriptor descriptor;
+        descriptor.description = "REQUIRES RESTART.";
 
         try
         {
-            val = this->declare_parameter<T>(name, defaultVal);
+            val = this->declare_parameter<T>(name, defaultVal, descriptor);
         } catch (std::runtime_error& e)
         {
             RCLCPP_WARN_STREAM(this->get_logger(), e.what());
