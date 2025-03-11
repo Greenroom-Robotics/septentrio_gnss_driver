@@ -236,45 +236,24 @@ namespace io {
         // Constructing the "level of operation" field
         uint16_t indicators_type_mask = static_cast<uint16_t>(255);
         uint16_t indicators_value_mask = static_cast<uint16_t>(3840);
-        uint16_t qualityind_pos;
-        for (uint16_t i = static_cast<uint16_t>(0);
-             i < last_qualityind_.indicators.size(); ++i)
-        {
-            if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
-                static_cast<uint16_t>(0))
-            {
-                qualityind_pos = i;
-                if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
-                     8) == static_cast<uint16_t>(0))
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::ERROR,
-                                        "GNSS quality indicators are stale");
-                } else if (((last_qualityind_.indicators[i] &
-                             indicators_value_mask) >>
-                            8) == static_cast<uint16_t>(1) ||
-                           ((last_qualityind_.indicators[i] &
-                             indicators_value_mask) >>
-                            8) == static_cast<uint16_t>(2))
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::WARN,
-                                        "GNSS quality indicators are below nominal");
-                } else
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::OK,
-                                        "GNSS quality indicators are nominal");
-                }
-                break;
-            }
-        }
+        bool error_diagnostic = false;
+        bool warn_diagnostic = false;
 
         // Creating an array of values associated with the GNSS status
         for (uint16_t i = static_cast<uint16_t>(0);
              i != static_cast<uint16_t>(last_qualityind_.n); ++i)
         {
-            if (i == qualityind_pos)
+            if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
+                    8) <= settings_->gnss_error_level)
             {
-                continue;
-            }
+                error_diagnostic = true;
+            } else if (((last_qualityind_.indicators[i] &
+                            indicators_value_mask) >>
+                        8) <= settings_->gnss_warn_level)
+            {
+                warn_diagnostic = true;
+            } 
+           
             if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                 static_cast<uint16_t>(1))
             {
@@ -333,6 +312,22 @@ namespace io {
                                             indicators_value_mask) >>
                                             8));
             }
+        }
+
+        if (error_diagnostic)
+        {
+            gnss_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "GNSS quality indicators are insufficient");
+        }
+        else if (warn_diagnostic)
+        {
+            gnss_status.summary(DiagnosticStatusMsg::WARN,
+                                        "GNSS quality indicators are below nominal");
+        }
+        else
+        {
+            gnss_status.summary(DiagnosticStatusMsg::OK,
+                                        "GNSS quality indicators are nominal");
         }
     };
 

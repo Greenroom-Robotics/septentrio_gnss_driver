@@ -152,6 +152,10 @@ struct Settings
     bool activate_debug_log;
     //! Timeout before disconnection is declared
     double disconnect_timeout;
+    //! GNSS indicator error level out of 10
+    uint32_t gnss_error_level;
+    //! GNSS indicator warn level out of 10
+    uint32_t gnss_warn_level;
     //! Device
     std::string device;
     //! Device type
