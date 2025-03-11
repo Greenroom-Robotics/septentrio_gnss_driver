@@ -211,6 +211,24 @@ namespace io {
         publish<PoseWithCovarianceStampedMsg>("pose", msg);
     };
 
+    std::optional<MessageHandler::Covariance> MessageHandler::getCovarianceLatLonHeight()
+    {
+        if (std::isnan(last_insnavgeod_.latitude_std_dev) ||
+            std::isnan(last_insnavgeod_.longitude_std_dev) ||
+            std::isnan(last_insnavgeod_.height_std_dev))
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            MessageHandler::Covariance covariance;
+            covariance.latitude = std::pow(last_insnavgeod_.latitude_std_dev, 2);
+            covariance.longitude = std::pow(last_insnavgeod_.longitude_std_dev, 2);
+            covariance.height = std::pow(last_insnavgeod_.height_std_dev, 2);
+            return covariance;
+        }
+    }
+
     void MessageHandler::assembleGNSSDiagnosticArray(
         diagnostic_updater::DiagnosticStatusWrapper &gnss_status)
     {
@@ -236,45 +254,24 @@ namespace io {
         // Constructing the "level of operation" field
         uint16_t indicators_type_mask = static_cast<uint16_t>(255);
         uint16_t indicators_value_mask = static_cast<uint16_t>(3840);
-        uint16_t qualityind_pos;
-        for (uint16_t i = static_cast<uint16_t>(0);
-             i < last_qualityind_.indicators.size(); ++i)
-        {
-            if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
-                static_cast<uint16_t>(0))
-            {
-                qualityind_pos = i;
-                if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
-                     8) == static_cast<uint16_t>(0))
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::ERROR,
-                                        "GNSS quality indicators are stale");
-                } else if (((last_qualityind_.indicators[i] &
-                             indicators_value_mask) >>
-                            8) == static_cast<uint16_t>(1) ||
-                           ((last_qualityind_.indicators[i] &
-                             indicators_value_mask) >>
-                            8) == static_cast<uint16_t>(2))
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::WARN,
-                                        "GNSS quality indicators are below nominal");
-                } else
-                {
-                    gnss_status.summary(DiagnosticStatusMsg::OK,
-                                        "GNSS quality indicators are nominal");
-                }
-                break;
-            }
-        }
+        bool error_diagnostic = false;
+        bool warn_diagnostic = false;
 
         // Creating an array of values associated with the GNSS status
         for (uint16_t i = static_cast<uint16_t>(0);
              i != static_cast<uint16_t>(last_qualityind_.n); ++i)
         {
-            if (i == qualityind_pos)
+            if (((last_qualityind_.indicators[i] & indicators_value_mask) >>
+                    8) <= settings_->gnss_error_level)
             {
-                continue;
-            }
+                error_diagnostic = true;
+            } else if (((last_qualityind_.indicators[i] &
+                            indicators_value_mask) >>
+                        8) <= settings_->gnss_warn_level)
+            {
+                warn_diagnostic = true;
+            } 
+           
             if ((last_qualityind_.indicators[i] & indicators_type_mask) ==
                 static_cast<uint16_t>(1))
             {
@@ -334,7 +331,53 @@ namespace io {
                                             8));
             }
         }
+
+        if (error_diagnostic)
+        {
+            gnss_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "GNSS quality indicators are insufficient");
+        }
+        else if (warn_diagnostic)
+        {
+            gnss_status.summary(DiagnosticStatusMsg::WARN,
+                                        "GNSS quality indicators are below nominal");
+        }
+        else
+        {
+            gnss_status.summary(DiagnosticStatusMsg::OK,
+                                        "GNSS quality indicators are nominal");
+        }
     };
+
+    void MessageHandler::assembleCovarianceDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &covariance_status)
+    {
+        auto covariance_optional = getCovarianceLatLonHeight();
+        if (!covariance_optional)
+        {
+            covariance_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "Covariance is not available");
+            return;
+        }
+
+        MessageHandler::Covariance covariance = *covariance_optional;
+        if (covariance.latitude >= settings_->covariance_threshold ||
+                covariance.longitude >= settings_->covariance_threshold)
+        {
+            covariance_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "Covariance is more than the set threshold");
+        }
+        else
+        {
+            covariance_status.summary(DiagnosticStatusMsg::OK,
+                                        "Covariance is below the set threshold");
+        }
+
+        covariance_status.add("Covariance Latitude", std::to_string(covariance.latitude));  
+        covariance_status.add("Covariance Longitude", std::to_string(covariance.longitude)); 
+        covariance_status.add("Covariance Height", std::to_string(covariance.height));
+
+    }
 
     void MessageHandler::assembleReceiverDiagnosticArray(
         diagnostic_updater::DiagnosticStatusWrapper &receiver_status)

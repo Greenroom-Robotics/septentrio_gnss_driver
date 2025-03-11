@@ -50,6 +50,10 @@ def generate_launch_description():
             "multi_antenna": True,
             "datum": "Default",
             "att_offset": {"heading": 90.0, "pitch": 0.0},
+            "polling_period.pvt": 100,
+            "gnss_error_level": 1,
+            "gnss_warn_level": 4,
+            "covariance_threshold": 50.0,
             "publish": {
                 "geopose_stamped": True,
                 "twist_flu_stamped": True,

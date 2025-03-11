@@ -154,6 +154,8 @@ namespace io {
         {
             node_->diagnostic_updater_->add("GNSS", this,
                                      &MessageHandler::assembleGNSSDiagnosticArray);
+            node_->diagnostic_updater_->add("Covariance", this,
+                                     &MessageHandler::assembleCovarianceDiagnosticArray);
             node_->diagnostic_updater_->add("Receiver", this,
                                      &MessageHandler::assembleReceiverDiagnosticArray);
             if (settings_->publish_galauthstatus) {
@@ -186,6 +188,13 @@ namespace io {
         void parseNmea(const std::shared_ptr<Telegram>& telegram);
 
     private:
+        struct Covariance
+        {
+            float latitude;
+            float longitude;
+            float height;
+        };
+        
         /**
          * @brief Header assembling
          * @param[in] frameId String of frame ID
@@ -356,6 +365,12 @@ namespace io {
         void assembleGpsFix();
 
         /**
+         * @brief Get covariance error
+         */
+        // std::optional<float> getCovarianceErrorLonLat();
+        std::optional<Covariance> getCovarianceLatLonHeight();
+
+        /**
          * @brief "Callback" function when constructing PoseWithCovarianceStamped
          * messages
          */
@@ -366,6 +381,12 @@ namespace io {
          * GNSSDiagnosticArrayMsg messages
          */
         void assembleGNSSDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &gnss_status); 
+
+        /**
+         * @brief "Callback" function when constructing
+         * CovarianceDiagnosticArrayMsg messages
+         */
+        void assembleCovarianceDiagnosticArray(diagnostic_updater::DiagnosticStatusWrapper &covariance_status);
 
         /**
          * @brief "Callback" function when constructing

@@ -108,6 +108,9 @@ namespace rosaic_node {
     [[nodiscard]] bool ROSaicNode::getROSParams()
     {
         param("disconnect_timeout", settings_.disconnect_timeout, 2.0);
+        getUint32Param("gnss_error_level", settings_.gnss_error_level, 1);
+        getUint32Param("gnss_warn_level", settings_.gnss_warn_level, 4);
+        param("covariance_threshold", settings_.covariance_threshold, 10.0f);
         param("ntp_server", settings_.ntp_server, false);
         param("ptp_server_clock", settings_.ptp_server_clock, false);
         param("use_gnss_time", settings_.use_gnss_time, false);
