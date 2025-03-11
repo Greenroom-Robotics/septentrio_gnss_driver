@@ -154,6 +154,8 @@ struct Settings
     double disconnect_timeout;
     //! GNSS indicator error level out of 10
     uint32_t gnss_error_level;
+    //! Covariance threshold
+    float covariance_threshold;
     //! GNSS indicator warn level out of 10
     uint32_t gnss_warn_level;
     //! Device

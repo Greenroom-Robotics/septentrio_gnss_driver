@@ -211,6 +211,24 @@ namespace io {
         publish<PoseWithCovarianceStampedMsg>("pose", msg);
     };
 
+    std::optional<MessageHandler::Covariance> MessageHandler::getCovarianceLatLonHeight()
+    {
+        if (std::isnan(last_insnavgeod_.latitude_std_dev) ||
+            std::isnan(last_insnavgeod_.longitude_std_dev) ||
+            std::isnan(last_insnavgeod_.height_std_dev))
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            MessageHandler::Covariance covariance;
+            covariance.latitude = std::pow(last_insnavgeod_.latitude_std_dev, 2);
+            covariance.longitude = std::pow(last_insnavgeod_.longitude_std_dev, 2);
+            covariance.height = std::pow(last_insnavgeod_.height_std_dev, 2);
+            return covariance;
+        }
+    }
+
     void MessageHandler::assembleGNSSDiagnosticArray(
         diagnostic_updater::DiagnosticStatusWrapper &gnss_status)
     {
@@ -330,6 +348,36 @@ namespace io {
                                         "GNSS quality indicators are nominal");
         }
     };
+
+    void MessageHandler::assembleCovarianceDiagnosticArray(
+        diagnostic_updater::DiagnosticStatusWrapper &covariance_status)
+    {
+        auto covariance_optional = getCovarianceLatLonHeight();
+        if (!covariance_optional)
+        {
+            covariance_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "Covariance is not available");
+            return;
+        }
+
+        MessageHandler::Covariance covariance = *covariance_optional;
+        if (covariance.latitude >= settings_->covariance_threshold ||
+                covariance.longitude >= settings_->covariance_threshold)
+        {
+            covariance_status.summary(DiagnosticStatusMsg::ERROR,
+                                        "Covariance is more than the set threshold");
+        }
+        else
+        {
+            covariance_status.summary(DiagnosticStatusMsg::OK,
+                                        "Covariance is below the set threshold");
+        }
+
+        covariance_status.add("Covariance Latitude", std::to_string(covariance.latitude));  
+        covariance_status.add("Covariance Longitude", std::to_string(covariance.longitude)); 
+        covariance_status.add("Covariance Height", std::to_string(covariance.height));
+
+    }
 
     void MessageHandler::assembleReceiverDiagnosticArray(
         diagnostic_updater::DiagnosticStatusWrapper &receiver_status)
